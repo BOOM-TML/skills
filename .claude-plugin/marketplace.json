@@ -1,0 +1,14 @@
+{
+  "name": "boom",
+  "owner": {
+    "name": "Boom",
+    "url": "https://useboom.ai"
+  },
+  "plugins": [
+    {
+      "name": "boom",
+      "source": "./plugins/boom",
+      "description": "Boom MCP server + skills for running AI-led customer research (initiatives, participants, transcripts, CDP segments)."
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "name": "boom",
+  "version": "0.1.0",
+  "description": "Skills + MCP config for Boom (useboom.ai): launch customer research initiatives, manage participants, analyze transcripts, query the CDP.",
+  "author": { "name": "Boom", "url": "https://useboom.ai" }
+}
