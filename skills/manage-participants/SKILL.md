@@ -9,6 +9,7 @@ description: Use when the user wants to add people to a Boom initiative, check p
 
 | Tool | Purpose | Scope |
 |---|---|---|
+| `initiatives_list` | Find the target initiative | read |
 | `participants_add` | Enroll people in an initiative | **admin** |
 | `participants_list` | List participants + status, paginated | read |
 | `participants_get` | One participant's detail | read |
