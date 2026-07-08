@@ -1,6 +1,6 @@
 # Boom Skills
 
-> **Beta** — these skills target Boom's MCP server, which is rolling out now. Tool names may change before GA.
+> **Beta** — these skills target Boom's MCP server, which is launching soon. Tool names may change before GA.
 
 Agent Skills that teach Claude how to run customer research on [Boom](https://useboom.ai): launch AI-led customer interviews over WhatsApp and email, manage participants, and turn transcripts into insight — using Boom's MCP tools the way they were designed to be used.
 
