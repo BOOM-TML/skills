@@ -35,6 +35,7 @@ export BOOM_API_KEY=boom_sk_...   # create one in Boom → Settings → API Keys
 | [`analyze-results`](skills/analyze-results/SKILL.md) | Turn initiative data and transcripts into insight |
 | [`manage-participants`](skills/manage-participants/SKILL.md) | Add, monitor, and stop participants in an initiative |
 | [`cdp-and-segments`](skills/cdp-and-segments/SKILL.md) | Query Boom's CDP and build segments to target |
+| [`build-knowledge-base`](skills/build-knowledge-base/SKILL.md) | Prepare your agent context to hand to Boom — durable brand identity + a brief per use case (research, churn recovery, data collection). Guided interview + own-site research. |
 
 ## Domain model
 
