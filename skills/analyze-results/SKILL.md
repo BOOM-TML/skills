@@ -1,6 +1,6 @@
 ---
 name: analyze-results
-description: Use when the user wants to analyze results from a Boom initiative — read data summaries, pull participant transcripts, synthesize churn reasons or product insights from AI-led interviews. Read-only.
+description: Use when the user wants to analyze or learn from a Boom initiative that is already running — "what did we learn?", "why are customers churning?", "summarize the interviews" — by reading the aggregate data summary and sampling participant transcripts to synthesize themes and insights. Read-only; safe with any key scope. To add, stop, or check individual participants instead, use manage-participants.
 ---
 
 # Analyze Initiative Results
