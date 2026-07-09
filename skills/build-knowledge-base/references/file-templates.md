@@ -16,8 +16,10 @@ Write real prose and concrete examples, not the bracketed hints below.
 
 Prepared <date>. Sources: <their website + any material they provided>.
 
-This folder is the brand context for our Boom AI agent. Files:
+This folder is the context for our Boom AI agent: the durable identity plus a brief
+per use case.
 
+## Durable identity (shared by every use case)
 1. Brand & identity
 2. Voice & tone
 3. Glossary
@@ -25,6 +27,11 @@ This folder is the brand context for our Boom AI agent. Files:
 5. Customers, ICP & personas
 6. Policies & guardrails
 7. Scope & escalation
+
+## Use cases covered
+- <e.g. Research — `use-cases/research.md`>
+- <e.g. Churn recovery — `use-cases/churn-recovery.md`>
+- (we can add more later without redoing the identity)
 
 ## Still to provide (gaps)
 - <list every ⚠️ Gap left in the files, or "none">

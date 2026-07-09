@@ -1,6 +1,6 @@
 ---
 name: build-knowledge-base
-description: Use when a Boom customer needs to prepare the knowledge base / brand context for their AI agent — the durable facts (brand, voice, glossary, product, customers, guardrails) that make an agent good. Runs a guided interview one question at a time, researches the company's own website when given a URL, and outputs a structured set of markdown files to hand to Boom. Triggers on "build our knowledge base", "prepare our context for Boom", "what should we send Boom", "onboard our agent".
+description: Use when a Boom customer needs to prepare the context for their AI agent — the durable brand identity (brand, voice, glossary, product, customers, guardrails) plus a brief per use case (research, churn recovery, data collection). Runs a guided interview, researches the company's own website when given a URL, and outputs a structured markdown bundle to hand to Boom. Triggers on "build our knowledge base", "prepare our context for Boom", "onboard our agent".
 ---
 
 # Build your knowledge base
@@ -11,6 +11,13 @@ Boom, which Boom turns into the agent's context.
 
 This is a guided interview, not a form. You ask questions one at a time, research the
 company's own website when given a URL, and write the files for them.
+
+**A company is one agent identity + one or more use cases.** The same agent can run
+several jobs — research, then churn recovery, then lead qualification — added over
+time. So the bundle has two layers: the **durable identity** (gathered once, shared by
+every use case) and a **brief per use case** (the goal, audience, and rules for that
+specific job). You capture the identity first, then a brief for each use case they want
+now — and they can come back for more later.
 
 ## Tools used
 
@@ -47,10 +54,12 @@ knowledge, keep it. If it's about what they *want to achieve* → that's a plan 
 Boom's team, not agent context; set it aside.
 
 <HARD-GATE>
-Do NOT write the final bundle until you have (a) gathered sources / done available
-web research, (b) interviewed the user through the seven sections, and (c) shown them
-drafts and gotten confirmation. Never invent facts. If something is unknown, mark it
-as a gap for a human to fill — do not guess.
+Do NOT write the final bundle until you have (a) gathered sources / done available web
+research, (b) identified the use case(s), (c) interviewed the user through the durable
+identity sections AND each use-case brief, and (d) shown them drafts and gotten
+confirmation. Never invent facts. If something is unknown, mark it as a gap for a human
+to fill — do not guess. **Capture a use-case BRIEF, never a step-by-step playbook** —
+Boom writes the playbook from your brief (see "Use cases" below).
 </HARD-GATE>
 
 ## Checklist
@@ -58,17 +67,20 @@ as a gap for a human to fill — do not guess.
 Create a task for each and complete in order:
 
 1. **Frame it & gather sources** — explain what you're building (one short paragraph), then ask for their website URL and any existing material (brand guide, product one-pager, FAQ, help center). One ask.
-2. **Research their own sources** — if a URL was given and web tools are available, read their public pages (home, product, about, pricing, FAQ/help, contact). Summarize what you learned and ask them to confirm/correct. **Own sources only** — their site and material they give you; never pull in press, competitors, or third-party claims.
-3. **Interview, section by section** — walk the seven sections below, **one question at a time**, pre-filling from research so you ask sharper questions ("Your site says X — is that how you'd want the agent to say it?"). Prefer multiple-choice when you can.
-4. **Draft each file and confirm** — as a section firms up, draft that file and show it. Adjust from their reaction. Keep language plain — no jargon.
-5. **Write the bundle** — save all files to `knowledge-base/` (see structure below) plus a `README.md` index.
-6. **Self-review** — scan for placeholders, strategy-masquerading-as-fact, and unverified claims. Fix or flag as gaps.
-7. **Hand-off** — tell them how to send the folder to Boom.
+2. **Identify the use case(s)** — ask what they want the agent to *do*, and map it to Boom's use cases (research, churn recovery, data collection/conversion — see "Use cases" below). Multiple are fine; ask which is first. Tell them they can add more later. Each selected use case becomes one brief.
+3. **Research their own sources** — if a URL was given and web tools are available, read their public pages (home, product, about, pricing, FAQ/help, contact). Summarize what you learned and ask them to confirm/correct. **Own sources only** — their site and material they give you; never pull in press, competitors, or third-party claims.
+4. **Interview the durable identity, section by section** — walk the seven identity sections below, **one question at a time**, pre-filling from research so you ask sharper questions ("Your site says X — is that how you'd want the agent to say it?"). Prefer multiple-choice when you can.
+5. **Interview each use-case brief** — for every use case picked in step 2, ask that use case's brief questions (`references/use-case-briefs.md`). Capture goal, audience, what's on the table, rules, escalation, and never-say. A **brief, not a playbook**.
+6. **Draft each file and confirm** — as a section or brief firms up, draft that file and show it. Adjust from their reaction. Keep language plain — no jargon.
+7. **Write the bundle** — save the durable identity to `knowledge-base/`, one brief per use case to `knowledge-base/use-cases/`, plus a `README.md` index.
+8. **Self-review** — scan for placeholders, strategy-masquerading-as-fact, unverified claims, and any playbook/internal leakage in the briefs. Fix or flag as gaps.
+9. **Hand-off** — tell them how to send the folder to Boom.
 
-## The seven sections → output files
+## The durable identity — seven sections → `knowledge-base/`
 
-Interview around these seven buckets. Each becomes one file. Full question prompts are
-in `references/question-bank.md`; file shapes and examples are in
+This is the agent's identity, gathered **once** and shared by every use case. Interview
+around these seven buckets; each becomes one file. Full question prompts are in
+`references/question-bank.md`; file shapes and examples are in
 `references/file-templates.md`.
 
 | # | File | What you're eliciting |
@@ -80,6 +92,27 @@ in `references/question-bank.md`; file shapes and examples are in
 | 5 | `05-customers-icp-personas.md` | Who the customers are: ideal customer profile, the main personas/segments, and the language *those* customers use. |
 | 6 | `06-policies-and-guardrails.md` | What the agent must and must not do or say: hard rules, sensitive topics, claims it can't make, and things that have gone wrong before. |
 | 7 | `07-scope-and-escalation.md` | The agent's job boundary: what it handles, what it must NOT try to handle, and exactly when to hand off to a human. Also flags whether the agent will share back a customer's own records/account data. |
+
+## Use cases → one brief each in `knowledge-base/use-cases/`
+
+On top of the shared identity, each thing the agent *does* is a **use case**, and each
+gets its own **brief**. Boom's use cases (name them in plain language):
+
+| Use case | It means | The brief captures |
+|---|---|---|
+| **Research / discovery** | Interviews, NPS, understanding churn reasons | Objective, the questions to explore, audience/cohort, how deep to probe, how to frame identity |
+| **Churn recovery / win-back** | Reactivate customers who left | Who to win back, **what's on the table** (e.g. "a discount up to X — *you* own the exact limits"), when to escalate, what to never say (internal codes, coupons) |
+| **Data collection / conversion** | Qualify leads, book, onboard, collect info | What to collect/qualify, what counts as success (a booking, a hand-off), disqualification, escalation |
+
+Per-use-case questions and the brief file templates are in
+`references/use-case-briefs.md`.
+
+**Capture a brief, not a playbook.** Get the *goal and the rules*, not a step-by-step
+script — Boom writes the playbook from your brief. This is deliberate: a hand-written
+playbook tends to leak internal mechanics (tier codes, coupon codes, internal system
+names) and bake in assumptions that don't fit the runtime. So for "what's on the
+table," capture the **envelope** ("up to X% off, you decide the exact amount per
+customer") — never internal codes, exact matrices, or coupon strings.
 
 ## How to run the interview
 
@@ -131,11 +164,13 @@ Look at the bundle with fresh eyes and fix inline:
 
 Close by telling the user:
 
-> Your knowledge base is in the `knowledge-base/` folder. Zip it (or share the folder)
-> and send it to your Boom contact — they'll use it to build your agent's context. The
-> `README.md` inside lists what's included and flags anything still missing.
+> Your knowledge base is in the `knowledge-base/` folder — the durable identity plus a
+> brief for each use case under `use-cases/`. Zip it (or share the folder) and send it
+> to your Boom contact; they'll use it to build your agent's context. The `README.md`
+> inside lists what's included, which use cases are covered, and anything still missing.
 
-Then list any `⚠️ Gap` items you left, so they know what to gather next.
+Then list any `⚠️ Gap` items you left, and remind them they can add more use cases
+later without redoing the identity.
 
 ## What NOT to do
 
@@ -144,4 +179,9 @@ Then list any `⚠️ Gap` items you left, so they know what to gather next.
 - Don't pull in third-party or competitor content; own sources only.
 - Don't use Boom's internal jargon in the files ("runtime", "microVM", "snapshot",
   "runtime contract"). Write in the customer's own plain language.
-- Don't dump the whole interview into one file — produce the seven-file structure.
+- Don't dump the whole interview into one file — produce the seven identity files plus
+  one brief per use case under `use-cases/`.
+- Don't let a use case turn into a hand-written playbook — capture the goal, the
+  envelope, and the rules; Boom writes the steps. Never record internal codes, discount
+  matrices, or coupon strings.
+- Don't re-gather the identity for each use case — it's shared; gather it once.

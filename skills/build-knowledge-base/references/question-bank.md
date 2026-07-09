@@ -8,6 +8,23 @@ you can and ask them to confirm rather than starting blank.
 Prefer multiple-choice when it speeds things up. Always push for **concrete examples**
 over adjectives.
 
+Sections 1–7 are the **durable identity** (gathered once). The **use-case** questions
+(what the agent actually does) live in `references/use-case-briefs.md` — ask them per
+use case after the identity is captured.
+
+---
+
+## 0 — Use case discovery (ask early, right after framing)
+
+- In one sentence, what do you want this agent to *do* for you?
+- Map their answer to Boom's use cases (offer them, plain-language, multi-select):
+  - **Research / discovery** — "talk to customers to understand their experience, NPS, why they leave."
+  - **Churn recovery / win-back** — "reach out to customers who left and invite them back."
+  - **Data collection / conversion** — "qualify leads, book appointments, onboard, or collect information."
+- If they pick more than one: which do you want to launch **first**?
+- (Reassure) "We can add more later — the brand identity we're about to capture is shared, so a second use case is just another short brief."
+- For each selected use case, run its brief questions from `references/use-case-briefs.md`.
+
 ---
 
 ## 1 — Brand & identity → `01-brand-and-identity.md`
