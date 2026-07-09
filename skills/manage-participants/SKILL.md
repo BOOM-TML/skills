@@ -1,6 +1,6 @@
 ---
 name: manage-participants
-description: Use when the user wants to add people to a Boom initiative, check participant status, stop a participant's outreach, or read one participant's conversation. Participants always belong to an initiative.
+description: Use when the user wants to add people to an EXISTING Boom initiative, check who has replied or a participant's status, stop outreach to someone, or read one participant's conversation. Participants always belong to an initiative — there is no global list and no delete (stopping retains data). To create and launch a brand-new initiative, use launch-research-initiative.
 ---
 
 # Manage Participants

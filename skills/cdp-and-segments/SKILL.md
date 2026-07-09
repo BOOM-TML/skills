@@ -1,6 +1,6 @@
 ---
 name: cdp-and-segments
-description: Use when the user wants to query Boom's customer data platform (persons, custom objects, attributes) or build/refresh a segment to target an initiative. Segments define WHO an initiative reaches.
+description: Use when the user wants to query Boom's customer data platform (persons, custom objects, attributes) or build/refresh a saved segment — "who are our churned premium users?", "build an audience of June trial signups", "what attributes do we track?". Segments define WHO an initiative reaches; pair with launch-research-initiative to target one.
 ---
 
 # CDP & Segments

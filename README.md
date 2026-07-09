@@ -27,6 +27,12 @@ The plugin also configures Boom's MCP server. Set your API key first:
 export BOOM_API_KEY=boom_sk_...   # create one in Boom → Settings → API Keys
 ```
 
+## How skills are named
+
+Installed via the **plugin**, skills are automatically namespaced under the plugin, so they appear and can be invoked as `boom:<skill>` — e.g. `boom:launch-research-initiative`. You don't prefix the skill names yourself; the `boom:` comes from the plugin. Installed via the **`skills` CLI** (Option 1), they keep their bare names (`launch-research-initiative`).
+
+Either way, Claude selects the right skill from its `description` — typing the name is optional. That's why the skill folders stay unprefixed: adding `boom-` manually would collide with the plugin's automatic `boom:` and produce `boom:boom-…`.
+
 ## Skills
 
 | Skill | Use it to |

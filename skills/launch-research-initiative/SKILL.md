@@ -1,6 +1,6 @@
 ---
 name: launch-research-initiative
-description: Use when the user wants to launch a customer research initiative on Boom — AI-led interviews over WhatsApp or email to answer a product question (churn reasons, feature feedback, discovery). Covers creating the initiative, choosing a template and WhatsApp number, adding participants, and launching.
+description: Use when the user wants to launch, start, or set up a NEW customer research initiative on Boom — AI-led interviews over WhatsApp or email to answer a product question (churn reasons, feature feedback, discovery). Covers creating the initiative, choosing a template and WhatsApp number, adding the first participants, and launching outreach. For an initiative that already exists, use manage-participants or analyze-results instead.
 ---
 
 # Launch a Research Initiative
