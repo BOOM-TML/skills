@@ -37,11 +37,15 @@ Either way, Claude selects the right skill from its `description` — typing the
 
 | Skill | Use it to |
 |---|---|
-| [`launch-research-initiative`](skills/launch-research-initiative/SKILL.md) | Create and launch a customer research initiative end-to-end |
-| [`analyze-results`](skills/analyze-results/SKILL.md) | Turn initiative data and transcripts into insight |
-| [`manage-participants`](skills/manage-participants/SKILL.md) | Add, monitor, and stop participants in an initiative |
-| [`cdp-and-segments`](skills/cdp-and-segments/SKILL.md) | Query Boom's CDP and build segments to target |
+| [`boom-overview`](skills/boom-overview/SKILL.md) | Get oriented: Boom's object model, lifecycle, and which skill to use when |
 | [`build-knowledge-base`](skills/build-knowledge-base/SKILL.md) | Prepare your agent context to hand to Boom — durable brand identity + a brief per use case (research, churn recovery, data collection). Guided interview + own-site research. |
+| [`connect-your-data`](skills/connect-your-data/SKILL.md) | Sync your Postgres/MySQL/Shopify data into Boom's CDP (read-only user, SSH tunnel, mapping SQL) |
+| [`cdp-and-segments`](skills/cdp-and-segments/SKILL.md) | Query Boom's CDP and build segments to target |
+| [`launch-research-initiative`](skills/launch-research-initiative/SKILL.md) | Create and launch a customer research initiative end-to-end, with the context-authoring formula from Boom's best-performing initiatives |
+| [`whatsapp-templates`](skills/whatsapp-templates/SKILL.md) | Write WhatsApp openers that pass Meta review and earn replies |
+| [`design-journey`](skills/design-journey/SKILL.md) | Design or debug the workflow graph behind an initiative (follow-up rounds, branching, timing) |
+| [`manage-participants`](skills/manage-participants/SKILL.md) | Add, monitor, and stop participants in an initiative |
+| [`analyze-results`](skills/analyze-results/SKILL.md) | Turn initiative data and transcripts into insight |
 
 ## Domain model
 

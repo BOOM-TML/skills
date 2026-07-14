@@ -10,9 +10,9 @@ description: Use when the user wants to analyze or learn from a Boom initiative 
 | Tool | Purpose | Scope |
 |---|---|---|
 | `initiatives_list` / `initiatives_get` | Find the initiative and its status | read |
-| `data_summary` | Aggregated results for an initiative (`/data/summary`) | read |
-| `participants_list` | Enumerate participants + per-person status | read |
-| `participants_messages` | Full transcript for one participant (flat, chronological, with direction + author) | read |
+| `initiatives_summary` | Aggregated results for an initiative (`/data/summary`) | read |
+| `initiatives_participants_list` | Enumerate participants + per-person status | read |
+| `initiatives_participant_messages_list` | Full transcript for one participant (flat, chronological, with direction + author) | read |
 
 ## When to use
 
@@ -22,12 +22,12 @@ description: Use when the user wants to analyze or learn from a Boom initiative 
 ## Workflow
 
 1. **Locate the initiative** (`initiatives_list`, paginate with `next_cursor`). Confirm with the user if more than one matches.
-2. **Start with the aggregate** (`data_summary`): completion counts, extracted themes, flagged conversations. Present this before diving into transcripts.
-3. **Sample transcripts deliberately** — don't read all of them. Pull via `participants_messages`:
-   - all *flagged* conversations (the org's `flagConditionPrompt` fired),
+2. **Start with the aggregate** (`initiatives_summary`): completion counts, extracted themes, flagged conversations. Present this before diving into transcripts.
+3. **Sample transcripts deliberately** — don't read all of them. Pull via `initiatives_participant_messages_list`:
+   - all *flagged* conversations (the initiative's `flagCondition` matched — each flag result carries the AI's reasoning, worth quoting),
    - 5–10 completed interviews across different outcomes,
    - a couple of drop-offs (where the participant went silent).
-4. **Synthesize.** Lead with the answer to the initiative's `goal`. Structure: top 3–5 themes with participant counts, verbatim quotes (attributed as "a participant", never by name/phone), contradictions worth a follow-up study, and recommended actions.
+4. **Synthesize.** Lead with the answer to the initiative's `objective`. Structure: top 3–5 themes with participant counts, verbatim quotes (attributed as "a participant", never by name/phone), contradictions worth a follow-up study, and recommended actions.
 
 ## Boom best practices
 
@@ -39,7 +39,7 @@ description: Use when the user wants to analyze or learn from a Boom initiative 
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `data_summary` empty | Initiative not launched or no completions yet | Check `initiatives_get` status; report timeline instead |
+| `initiatives_summary` empty | Initiative not launched or no completions yet | Check `initiatives_get` status; report timeline instead |
 | Transcript has only outbound messages | Participant never replied | Count as non-responder, not as negative feedback |
 
 See [`CONTEXT.md`](../../CONTEXT.md) for the domain model.

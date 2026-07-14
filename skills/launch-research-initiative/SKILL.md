@@ -1,60 +1,98 @@
 ---
 name: launch-research-initiative
-description: Use when the user wants to launch, start, or set up a NEW customer research initiative on Boom — AI-led interviews over WhatsApp or email to answer a product question (churn reasons, feature feedback, discovery). Covers creating the initiative, choosing a template and WhatsApp number, adding the first participants, and launching outreach. For an initiative that already exists, use manage-participants or analyze-results instead.
+description: Use when the user wants to launch, start, or set up a NEW customer research initiative on Boom — AI-led interviews over WhatsApp or email to answer a product question (churn reasons, feature feedback, discovery, activation, NPS follow-up). Covers writing the objective/context/guiding questions, choosing a template and WhatsApp number, adding the first participants, and launching. For an initiative that already exists, use manage-participants or analyze-results instead.
 ---
 
 # Launch a Research Initiative
+
+An initiative's quality is decided by three text fields — `objective`, `context`, and the guiding questions — because they are injected directly into the AI interviewer's prompt. This skill encodes how Boom's highest-performing production initiatives write them.
 
 ## Tools used
 
 | Tool | Purpose | Scope |
 |---|---|---|
-| `initiatives_create` | Create the initiative | write |
+| `initiatives_create` / `initiatives_update` | Create/edit the initiative (DRAFT only is editable) | write |
 | `initiatives_get` | Verify configuration before launch | read |
 | `whatsapp_numbers_list` | Discover the org's WhatsApp sender numbers | read |
-| `templates_list` / `templates_create` | Pick or create the opening WhatsApp template | read / write |
-| `participants_add` | Enroll people | **admin** |
+| `templates_list` / `templates_create` | Pick or create the opening template — see `whatsapp-templates` | read / write |
+| `initiatives_templates_get` / `initiatives_templates_set` | Attach opener + follow-up templates to the initiative | read / write |
+| `initiatives_participants_add` | Enroll people | **admin** |
 | `initiatives_launch` | Start outreach | **admin** |
 
-> Tool names may drift while Boom's MCP is in beta. If a call fails with `tool_not_found`, list available tools and match by the `domain_action` pattern.
+> Tool names may drift while Boom's MCP is in beta. On `tool_not_found`, list tools and match the `domain_action` pattern.
 
 ## When to use / when not to
 
-- Use for a *research* goal: understanding why customers churn, how they use a feature, what to build next.
-- Do NOT use for one-off broadcasts or support replies — Boom initiatives run structured, multi-turn interviews.
-- If the user only wants to read existing results, use `analyze-results` instead.
-
-## Prerequisites
-
-- Boom MCP connected and `BOOM_API_KEY` set. Adding participants and launching require an **admin-scoped** key — check with the user before assuming.
-- At least one active WhatsApp number (check `whatsapp_numbers_list`) for WhatsApp initiatives.
+- Use for a *research or learning* goal: churn reasons, feature feedback, activation blockers, discovery.
+- NOT for one-off broadcasts or support replies — initiatives run structured multi-turn interviews.
+- Only reading existing results → `analyze-results`. Audience building → `cdp-and-segments`.
 
 ## Workflow
 
-1. **Clarify the research goal first.** One sentence: what decision will this research inform? Push back on survey-shaped asks — Boom's agents do deep interviews with follow-ups, so the goal should be open ("understand why trial users don't convert"), not a question list.
-2. **Create the initiative** with `initiatives_create`:
-   - `name`, `goal` (the sentence from step 1)
-   - `flagConditionPrompt` — natural-language condition that flags conversations for human review (e.g. "participant mentions a competitor or asks for a refund")
-   - `identityDeflection` — how the agent answers "are you a bot?"
-   - `isRecurring: false` for a one-shot study
-3. **Pick the sender**: call `whatsapp_numbers_list`; show the user the options. Templates select numbers via `phoneNumbers[]` — omitting it uses the org's **first active number only** (not all numbers).
-4. **Pick or create the opening template** (`templates_list`, then `templates_create` if needed). WhatsApp openers must be pre-approved; expect a review delay for new templates. The opener should reference why you're reaching out and invite a reply — not pitch.
-5. **Add participants** with `participants_add` (see `manage-participants` for shape and DNC behavior). `phoneNumber` is E.164.
-6. **Verify before launching**: `initiatives_get` and read back name/goal/template/participant count to the user. **Launching messages real customers — always get explicit confirmation.**
-7. **Launch** with `initiatives_launch`.
+1. **Clarify the decision.** One sentence: what decision will this research inform? Push back on survey-shaped asks — Boom does deep interviews with AI follow-ups.
+2. **Draft the three core fields** using the formulas below. Show them to the user before creating anything.
+3. **Create** with `initiatives_create` — only `name` is required, but always send: `objective`, `context`, `guidingQuestions[]`, `language` (default `es`), `identityDeflection`, `flagCondition`, `maxAttempts`. It's created as **DRAFT**; a journey and outreach templates are auto-scaffolded from `maxAttempts`.
+4. **Attach the opener**: `whatsapp_numbers_list` → pick/create the template (see `whatsapp-templates`) → `initiatives_templates_set`. New templates take ~24–48h for Meta approval — create them early.
+5. **Enroll participants** (`initiatives_participants_add`, E.164 `phoneNumber`; per-participant `context` keys must match the initiative's `contextSchema`).
+6. **Verify** with `initiatives_get`; read back name/objective/template/participant count. **Launching messages real customers — get explicit confirmation.**
+7. **Launch** with `initiatives_launch` (admin key).
+
+## Writing the `objective` (≤2000 chars; aim for 1–3 sentences)
+
+This becomes the agent's *entire purpose*. State **what to understand, about whom, at which moment**:
+
+> "Entender por qué los usuarios que mostraron interés en un financiamiento recibieron el mensaje con éxito pero no abrieron el link para completar su onboarding digital."
+
+Not a topic ("churn feedback"), not a question list — one understanding-goal.
+
+## Writing the `context` (≤5000 chars Markdown) — the formula
+
+Production initiatives with the best interview quality all include these five blocks:
+
+1. **Business flow** — how the product/process works, step by step, so the agent never guesses. Name internal projects, partners, plans.
+2. **What the participant already experienced** — quote verbatim any prior messages they got, the screen they abandoned, the plan they canceled. The agent can then reference reality: "el mensaje donde te compartimos el link…"
+3. **Who the participants are** — customers? churned? leads who never converted? their relationship to the brand ("no son clientes de Nexu, solo leads que iniciaron con otra financiera").
+4. **Brand presentation rules** — what name to present as (sub-brands per partner: "preséntate como KIA Trust, nunca como Nexu"), tone constraints, language/formality.
+5. **No-go topics** — words and topics to avoid ("no destaques la palabra 'rechazo'", "nada que deje mal a Inbursa"), plus what to do when asked something off-script.
+
+Optionally: behavioral-science framing ("sé respetuoso y no invasivo al explorar el porqué de su inacción"). Files can be referenced with `[name](asset:<id>)` mentions if uploaded in the app.
+
+## Guiding questions — use the whole schema
+
+4–8 questions is the production sweet spot (≤50 allowed). Each supports:
+
+| Field | Values | Use |
+|---|---|---|
+| `questionText` | ≤280 chars | The question, in the initiative's language |
+| `answerType` | `OPEN` \| `MULTIPLE_CHOICE` \| `BOOLEAN` \| `SCALE` | `OPEN` for research; `SCALE` needs `scaleMin`/`scaleMax`; `MULTIPLE_CHOICE` takes `options[]` (≤20) |
+| `priority` | 1–5 | Interview order/importance — the agent covers high-priority first |
+| `followUpDepth` | `NONE` \| `LIGHT` \| `STANDARD` \| `DEEP` | How hard the AI digs. `DEEP` on the 1–2 questions the decision hinges on; `LIGHT` elsewhere keeps interviews short |
+| `evaluationCriterion` | free text | What counts as a *complete* answer — drives the analyzer ("respuesta completa = causa concreta + si volvería a intentarlo") |
+
+Pattern from winners: Q1 = the core "why" (DEEP), Q2 = reaction to the concrete artifact they saw (quote it in context), Q3 = what would have changed their behavior, Q4 = situational factors (timing, alternatives).
+
+## The supporting fields
+
+- **`identityDeflection`** — how the agent answers "are you a bot?". Honest + warm + human-oversight works best in production: *"Sí, soy un bot pero del bueno 😊 — todas las respuestas las lee una persona del equipo, y tu opinión de verdad nos ayuda a mejorar."* Never instruct it to deny being an AI.
+- **`flagCondition`** — natural-language condition that flags a conversation for human review. Flag *actionable* moments, not sentiment: "el usuario expresa que aún le interesa obtener su préstamo", "menciona una mala práctica del asesor". One condition, concrete and observable.
+- **`maxAttempts`** (1–5, default 3) — outreach rounds; the auto-scaffolded journey gets one follow-up template per extra round.
+- **`contextSchema`** — declares per-participant variables (e.g. `{"credit_line": "monto de línea aprobada"}`). Participant `context` keys are validated against it; the agent can then personalize. Keep keys snake_case and short.
+- **End conditions** — `endConditionType`: `MANUAL` (default), `DATE` (+`endDate`), or `RESPONSE_COUNT` (+`endResponseTarget`). `isRecurring` + `reportCadence` (`WEEKLY`/`BIWEEKLY`/`MONTHLY`) for always-on programs.
 
 ## Boom best practices
 
-- 50–300 participants is a good research batch; response rates on WhatsApp typically far exceed email.
-- Do Not Contact is enforced server-side — suppressed people are skipped automatically; don't try to detect or bypass it.
-- LATAM WhatsApp numbers: Boom prefers the `+521` form when matching Mexican numbers; just send valid E.164 and let the server normalize.
+- 50–300 participants per batch; WhatsApp response rates far exceed email.
+- Spanish (`es`) is the default and >98% of production volume; write all agent-facing text in the participant's language.
+- DNC is enforced server-side — a lower participant count than the list you sent means suppression; report the delta, never retry those entries.
 
 ## Failure modes
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `error.code: "forbidden"` on `participants_add` / `initiatives_launch` | Key is not admin-scoped | Ask the user for an admin key or have an admin run launch from the Boom app |
-| Template rejected | Opener reads as marketing | Rewrite as a research invitation; resubmit |
-| Participant count lower than the list you sent | DNC suppression | Expected — report the delta to the user, never retry the suppressed entries |
+| `forbidden` on participants/launch | Key not admin-scoped | Ask for an admin key or launch from the Boom app |
+| `initiatives_update` rejected | Initiative left DRAFT | Only DRAFT is editable; changes after activation go through the app |
+| Template stuck in PENDING | Meta review (~24–48h) | Create templates first; check back with `templates_list` |
+| Participant `context` rejected | Keys don't match `contextSchema` | Align keys exactly (case-sensitive) |
+| Interviews feel generic | `context` missing blocks 2/4/5 of the formula | Rewrite context; quote the actual artifacts participants saw |
 
 See [`CONTEXT.md`](../../CONTEXT.md) for the domain model.
