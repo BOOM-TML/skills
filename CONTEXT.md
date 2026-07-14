@@ -4,9 +4,9 @@ Boom is a multi-tenant platform where AI agents run natural conversations with c
 
 ## Objects
 
-- **Initiative** — a research/outreach campaign. Everything hangs off an initiative. Create → configure → add participants → launch. Key create/update fields: `name`, `goal`, `isRecurring`, `flagConditionPrompt` (natural-language condition that flags a conversation for review), `identityDeflection` (how the agent responds when asked if it is an AI).
+- **Initiative** — a research/outreach campaign. Everything hangs off an initiative. Create → configure → add participants → launch. Key create/update fields: `name` (the only required one), `objective` (the research goal, injected into the agent prompt), `context` (Markdown briefing), `guidingQuestions[]`, `language` (`es` default), `maxAttempts` (1–5 outreach rounds), `isRecurring`, `flagCondition` (natural-language condition that flags a conversation for review), `identityDeflection` (how the agent responds when asked if it is an AI). Created as DRAFT; only DRAFT is editable via the API.
 - **Participant** — a person enrolled in an initiative. Participants live ONLY under initiatives (`/initiatives/{id}/participants`). There is no delete: stopping a participant (`POST .../participants/{id}/stop`) halts outreach but retains data.
-- **Journey** — the workflow-step setup behind an initiative. Read-only via the API/MCP; you cannot enroll people into a journey directly.
+- **Journey** — the versioned workflow graph behind an initiative (send template → wait → AI conversation → follow-ups; nodes emit signals, edges route on them). Auto-scaffolded on initiative creation from `maxAttempts`. Read-only via the API/MCP (`journeys_list`/`journeys_get`); edited in Boom's builder UI. You cannot enroll people into a journey directly.
 - **Segment** — a saved audience filter over the CDP, used to target initiatives.
 - **CDP (`/cdp/`)** — persons + custom object types with attributes and relationships.
 - **Template** — a pre-approved WhatsApp message used to open conversations. Templates send from WhatsApp numbers you select via `phoneNumbers[]` (omit = the org's first active number). Discover numbers with `whatsapp_numbers_list`.
