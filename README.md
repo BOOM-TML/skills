@@ -38,6 +38,7 @@ Either way, Claude selects the right skill from its `description` — typing the
 | Skill | Use it to |
 |---|---|
 | [`boom-overview`](skills/boom-overview/SKILL.md) | Get oriented: Boom's object model, lifecycle, and which skill to use when |
+| [`onboarding`](skills/onboarding/SKILL.md) | Brand new to Boom? A guided, hands-on first run — build your first journey, send a Hello World, and learn the mental model |
 | [`build-knowledge-base`](skills/build-knowledge-base/SKILL.md) | Prepare your agent context to hand to Boom — durable brand identity + a brief per use case (research, churn recovery, data collection). Guided interview + own-site research. |
 | [`connect-your-data`](skills/connect-your-data/SKILL.md) | Sync your Postgres/MySQL/Shopify data into Boom's CDP (read-only user, SSH tunnel, mapping SQL) |
 | [`cdp-and-segments`](skills/cdp-and-segments/SKILL.md) | Query Boom's CDP and build segments to target |

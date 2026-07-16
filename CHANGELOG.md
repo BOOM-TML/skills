@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add `onboarding`: a guided, interactive first-run skill. Walks a brand-new user through building one small end-to-end journey (a "Hello World") — create the initiative and its objective, build the journey, create and connect a WhatsApp opener, add a test contact to the CDP with an external id, fire an event to enroll them, and watch the agent converse. Teaches the core mental model (journey = the flow you own; the live conversation = the AI driving toward your objective; CDP = your contacts) and points to segments, the shared inbox, and common use cases as next steps.
+
 - Add `boom-overview`: orientation + router skill — Boom's object model, project lifecycle, key scopes, and which skill to use for which request.
 - Add `whatsapp-templates`: content shapes per template type, UTILITY-vs-MARKETING strategy, variable rules, the real Meta rejection catalog, and opener copywriting that passes review and earns replies.
 - Add `design-journey`: the journey workflow DSL (node kinds, signal routing, publish validation rules), four proven production topologies, and a debugging guide. Honest about the MCP read-only boundary.
