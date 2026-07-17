@@ -16,10 +16,12 @@ This skill runs a **guided, interactive first run**. You (the agent) walk a bran
 | `initiatives_create` | Create the first initiative (the campaign + its objective) | write |
 | `journeys_create_draft` / `journeys_add_node` / `journeys_connect_nodes` / `journeys_set_trigger` / `journeys_validate` / `journeys_publish` | Build and publish the Hello World journey | write |
 | `journeys_authoring_catalog` / `journeys_message_channels` / `journeys_message_templates` | Look up node kinds, sender channels, and template ids while building | read |
-| `whatsapp_numbers_list` / `templates_create` / `templates_list` | Find the sender number, create the opener, check its approval status | read / write |
+| `whatsapp_numbers_list` | Confirm the org has an active WhatsApp number (prerequisite), and find the sender | read |
+| `templates_create` / `templates_list` | Create the opener and check its approval status | read / write |
 | `cdp_people_upsert` | Add the user's test contact (name + phone) with a test external id | write |
 | `cdp_events_record` | Fire the event that drops the test contact into the journey | write |
 | `initiatives_participants_add` | Alternative: add the test contact to the initiative manually | admin |
+| `extraction_schema_set` | Define variables to pull from each conversation (later step) | admin |
 | `segments_list` / `segments_catalog` | Show how audiences work (later step, read-only) | read |
 
 Full mechanics live in the specific skills; link out rather than re-teaching: [`launch-research-initiative`](../launch-research-initiative/SKILL.md), [`design-journey`](../design-journey/SKILL.md), [`whatsapp-templates`](../whatsapp-templates/SKILL.md), [`cdp-and-segments`](../cdp-and-segments/SKILL.md).
@@ -28,13 +30,20 @@ Full mechanics live in the specific skills; link out rather than re-teaching: [`
 
 Explain, in plain terms:
 
-- Boom runs **natural conversations with your customers over WhatsApp** (and email). You decide who to reach and what the conversation should accomplish; Boom's AI runs the conversation and hands off to a human on the rare hard cases.
+- Boom is the **infrastructure for having natural conversations with your customers across multiple channels** — WhatsApp, email, and more. You decide who to reach and what each conversation should accomplish; Boom's AI runs the conversation and hands off to a human on the rare hard cases. (For today's Hello World we'll use WhatsApp.)
 - People use it for many jobs: recovering customers who dropped off, collecting documents or information, following up after a purchase, understanding why someone churned, running customer research. Same building blocks, different objective.
 - The two pieces you'll touch today:
   - **The journey** — a flow *you* design and control: send a message, wait, branch, call an external system, hand off. It's programmatic and deterministic.
   - **The conversation** — the moment a person replies, Boom's AI takes over and carries the conversation **toward the objective you set on the initiative**. This is the part people most often misunderstand, so be explicit: *you own the journey; the AI owns the live conversation, and it drives it toward your objective.*
 
 Then: "Let's build your first journey together." Confirm they're ready.
+
+## Prerequisite check — an active WhatsApp number
+
+Before building anything, check that the org has an active WhatsApp sender with `whatsapp_numbers_list`. **This is a hard gate: without an active number, no message can go out and the Hello World can't complete.**
+
+- If there's at least one active number, name it and continue.
+- If there's none, stop here and tell them plainly: they need to set up an active WhatsApp number first, and the Boom team can help them get it provisioned. Offer to pick things back up right after it's live. Don't try to work around it or build a journey that can never send.
 
 ## Step 1 — Create the initiative (and explain what it is)
 
@@ -79,12 +88,13 @@ Two ways to enroll someone; walk through the **event** path since the journey's 
 
 (The manual alternative is `initiatives_participants_add` — mention it exists.) Once the template is APPROVED and you fire the event, the opener sends to their phone. Have them reply — now they're talking to the agent, and they can watch the conversation run toward the objective you set. That's the Hello World moment.
 
-## Step 6 — Where to go next (two more concepts)
+## Step 6 — Where to go next (three more concepts)
 
-Close by pointing at the two things that make Boom scale, without building them today:
+Close by pointing at the things that make Boom scale, without building them today:
 
-1. **Segments** — just like you fired one event by hand, if Boom has your customer data you can define an **audience** (a saved filter over the CDP) and feed those people into a journey automatically. Show `segments_catalog` / `segments_list` read-only so they see the idea. Details in [`cdp-and-segments`](../cdp-and-segments/SKILL.md).
-2. **The shared inbox** — in the Boom app they can watch every conversation as it happens, jump in, and see where the AI handed off to a human.
+1. **Extracted variables** — the conversation gives you more than a transcript. You can tell Boom what to **pull out of every conversation** as structured variables (`extraction_schema_set`): the mood/sentiment, whether a competitor was mentioned and which one, a reason, a date, any data point you care about. Afterward you use those variables to understand what happened at scale — and even to segment on them. This is what turns conversations into insight rather than just chat logs. Details in [`analyze-results`](../analyze-results/SKILL.md).
+2. **Segments** — just like you fired one event by hand, if Boom has your customer data you can define an **audience** (a saved filter over the CDP, including on those extracted variables) and feed those people into a journey automatically. Show `segments_catalog` / `segments_list` read-only so they see the idea. Details in [`cdp-and-segments`](../cdp-and-segments/SKILL.md).
+3. **The shared inbox** — in the Boom app they can watch every conversation as it happens, jump in, and see where the AI handed off to a human.
 
 Then give them a few concrete use cases other teams run, so they can imagine their own:
 - **Abandoned cart / drop-off recovery** — reach people who started something and stopped, and help them finish.
