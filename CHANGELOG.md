@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Plugin distribution is now **commit-SHA versioned**: dropped the pinned `version` from `plugins/boom/.claude-plugin/plugin.json`, so every push to this repo is a new version. Users who enabled marketplace auto-update get new skills automatically on their next session; others update with `/plugin update boom@boom`.
+
 - `design-journey`: document the SEND_MESSAGE binding path families and the new `journeys_message_variables` catalog. Custom person attributes bind as `person.<key>` — not `attributes.bank` / `customer.attributes.bank` (that is the DECISION/CASE condition syntax and renders the message blank). `journeys_validate` now rejects an unresolvable binding path before publish; the troubleshooting entry for blank values covers the wrong-path case.
 
 - Rework `design-journey` for the MCP journey **authoring** surface: journeys are no longer read-only over MCP — the skill now documents the full author-and-publish loop (`journeys_create_draft` → `journeys_add_node` / `journeys_connect_nodes` → `journeys_set_trigger` → `journeys_validate` → `journeys_publish`) plus the read/catalog tools. Add the `HTTP_REQUEST` and `MANAGE_CONVERSATION` node kinds; mark `CONVERSATION_BLOCK` as legacy and recommend `WAIT_FOR_REPLY` + `MANAGE_CONVERSATION`; add a "bind your variables" (`templateBindings`) section, a chaining topology, and a "one objective per initiative" guideline. Update `boom-overview` and `CONTEXT.md` to match (journeys authored/published via MCP or the builder). Fix the `whatsapp-templates` "variables render literally" remedy to point at `journeys_update_node` / `templateBindings`.
