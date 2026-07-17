@@ -71,6 +71,6 @@ An initiative with `maxAttempts: N` needs an **INITIAL_OUTREACH** template plus 
 | Stuck `PENDING` >48h | Meta review queue (MARKETING is slower) | Wait, or re-frame as UTILITY if honest |
 | Template sends from the wrong number | `phoneNumbers[]` omitted at creation | Recreate with explicit numbers from `whatsapp_numbers_list` |
 | Journey publish blocked | Template not APPROVED yet, or not attached | Approve first; attach with `initiatives_templates_set` |
-| Variables render literally (`{{1}}`) | Binding missing in the journey's SEND_MESSAGE node | Fix `templateBindings` in the builder — see `design-journey` |
+| Variables render literally (`{{1}}`) | Binding missing in the journey's SEND_MESSAGE node | Set `templateBindings` on the node (via `journeys_update_node` or the builder) — bind every placeholder; see `design-journey` |
 
 See [`CONTEXT.md`](../../CONTEXT.md) for the domain model.
