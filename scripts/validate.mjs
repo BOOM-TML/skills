@@ -48,7 +48,10 @@ const plugin = JSON.parse(readFileSync(join(root, "plugins/boom/.claude-plugin/p
 JSON.parse(readFileSync(join(root, "plugins/boom/.mcp.json"), "utf8"));
 if (marketplace.plugins?.[0]?.name !== plugin.name)
   errors.push("marketplace plugin name != plugin.json name");
-if (!/^\d+\.\d+\.\d+$/.test(plugin.version)) errors.push("plugin.json version is not semver");
+// version is optional: omitting it makes Claude Code use the commit SHA
+// (every push = a new version). If set, it must be semver.
+if (plugin.version !== undefined && !/^\d+\.\d+\.\d+$/.test(plugin.version))
+  errors.push("plugin.json version, if set, must be semver");
 
 // 3. Plugin skills symlink resolves to root skills/
 if (!existsSync(join(root, "plugins/boom/skills/"))) errors.push("plugins/boom/skills symlink broken");
