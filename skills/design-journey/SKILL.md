@@ -17,6 +17,7 @@ Your job with this skill: *build or debug the graph precisely*, then either publ
 | `journeys_authoring_catalog` | The machine-readable node-kind catalog (kinds, inputs, output signals) — read this before building | read |
 | `journeys_condition_catalog` / `journeys_event_catalog` | Valid DECISION predicate terms and dispatchable/reserved event names | read |
 | `journeys_message_channels` / `journeys_message_templates` | Sending channel ids and approved template ids for SEND_MESSAGE | read |
+| `journeys_message_variables` | The exact variable paths a SEND_MESSAGE template binding can reference for a journey (`customer.*`, `person.<key>`, and run-produced values) — read this before binding placeholders | read |
 | `journeys_create_draft` / `journeys_create_draft_from_published` | Start a new editable draft (blank or copied from the live version) | write |
 | `journeys_add_node` / `journeys_update_node` / `journeys_delete_node` | Add, edit, or remove a node | write |
 | `journeys_connect_nodes` / `journeys_disconnect_nodes` | Wire (or unwire) an edge on a specific signal handle | write |
@@ -50,7 +51,7 @@ Routing rule: an edge fires when its `sourceHandle` equals the signal the node e
 
 ## Authoring workflow (MCP)
 
-1. **Learn the graph.** Call `journeys_authoring_catalog` for the node kinds and their inputs; `journeys_message_channels` / `journeys_message_templates` for the ids a SEND_MESSAGE needs; `journeys_condition_catalog` for DECISION predicate terms; `journeys_event_catalog` for valid event names.
+1. **Learn the graph.** Call `journeys_authoring_catalog` for the node kinds and their inputs; `journeys_message_channels` / `journeys_message_templates` for the ids a SEND_MESSAGE needs; `journeys_message_variables` for the paths a template binding can reference; `journeys_condition_catalog` for DECISION predicate terms; `journeys_event_catalog` for valid event names.
 2. **Open a draft.** `journeys_create_draft` for a blank one, or `journeys_create_draft_from_published` to iterate on the live version. Only a DRAFT is editable; a PUBLISHED version is frozen.
 3. **Build the nodes.** `journeys_add_node` per node, `journeys_connect_nodes` per edge (name the `sourceHandle` — the signal the edge routes on). Positions are optional; the server auto-lays-out the graph.
 4. **Set the trigger** with `journeys_set_trigger` (manual / segment / cdp_event).
@@ -63,6 +64,18 @@ You can also assemble the whole definition and send it in one `journeys_update_d
 ## Bind your variables (the most common miss)
 
 A SEND_MESSAGE references an approved template that has placeholders (`{{1}}`, `{{2}}`, a name, a link). The node will not fill them in unless you set **`templateBindings`** — a map from each template placeholder to the value it should carry (a participant attribute, or a value produced earlier in the flow). **Adding the SEND_MESSAGE node is not enough: set `templateBindings` for every placeholder in the template**, or the message sends with empty or literal `{{1}}` values. Confirm the template's placeholders with `journeys_message_templates`, then bind each one.
+
+**Use the right path.** A binding value is a dot-path, and it must be one the send-time resolver can reach. Call **`journeys_message_variables`** for the exact set this journey offers, then copy a returned `path` verbatim. The paths fall into three families:
+
+| Family | What it is | Example |
+|---|---|---|
+| `customer.<field>` | Built-in contact fields | `customer.name`, `customer.phoneNumber` |
+| `person.<key>` | **Custom person attributes** (from people upsert / your CDP) | `person.bank`, `person.plan` |
+| run-produced values | Answers extracted in the conversation, or event/segment data carried into the run | copy the exact `path` from `journeys_message_variables` |
+
+So a binding is **not** always `person.*` — built-in fields are `customer.*`, and extracted/event/segment data has its own paths that `journeys_message_variables` returns.
+
+> ⚠️ A custom person attribute is `person.<key>` (e.g. `person.bank`) — **not** `attributes.bank` and **not** `customer.attributes.bank`. `attributes.<key>` is the DECISION/CASE **condition** syntax (from `journeys_condition_catalog`); it does not resolve in a message binding and the message will arrive blank. `journeys_validate` now rejects such a binding before publish.
 
 ## Publish-time validation
 
@@ -132,7 +145,7 @@ Before publishing (or handing over a spec), verify:
 
 `journeys_get_definition` returns the full graph; `initiatives_get` shows the published version pointer. Typical diagnoses:
 - **"Second message never sent"** → the `TIMEOUT` edge is missing on the wait node, or the follow-up template is not APPROVED.
-- **"Message arrived with blank / `{{1}}` values"** → `templateBindings` missing on the SEND_MESSAGE node.
+- **"Message arrived with blank / `{{1}}` values"** → `templateBindings` is missing on the SEND_MESSAGE node, **or** a binding uses a path the resolver can't reach (e.g. `attributes.bank` / `customer.attributes.bank` instead of `person.bank`). Check each binding against `journeys_message_variables`; `journeys_validate` flags an unresolvable path.
 - **"Some people got nothing"** → a CASE value with no matching branch falling to an unwired default, or Do Not Contact suppression (expected, server-side).
 - **"Person enrolled twice"** → segment-triggered ENTRY without `maxEnrollments` / `enrollmentWindow`.
 
