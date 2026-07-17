@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Rework `design-journey` for the MCP journey **authoring** surface: journeys are no longer read-only over MCP — the skill now documents the full author-and-publish loop (`journeys_create_draft` → `journeys_add_node` / `journeys_connect_nodes` → `journeys_set_trigger` → `journeys_validate` → `journeys_publish`) plus the read/catalog tools. Add the `HTTP_REQUEST` and `MANAGE_CONVERSATION` node kinds; mark `CONVERSATION_BLOCK` as legacy and recommend `WAIT_FOR_REPLY` + `MANAGE_CONVERSATION`; add a "bind your variables" (`templateBindings`) section, a chaining topology, and a "one objective per initiative" guideline. Update `boom-overview` and `CONTEXT.md` to match (journeys authored/published via MCP or the builder). Fix the `whatsapp-templates` "variables render literally" remedy to point at `journeys_update_node` / `templateBindings`.
+
 - Add `boom-overview`: orientation + router skill — Boom's object model, project lifecycle, key scopes, and which skill to use for which request.
 - Add `whatsapp-templates`: content shapes per template type, UTILITY-vs-MARKETING strategy, variable rules, the real Meta rejection catalog, and opener copywriting that passes review and earns replies.
 - Add `design-journey`: the journey workflow DSL (node kinds, signal routing, publish validation rules), four proven production topologies, and a debugging guide. Honest about the MCP read-only boundary.
