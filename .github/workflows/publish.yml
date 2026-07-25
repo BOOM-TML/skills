@@ -1,0 +1,35 @@
+name: publish
+# Publishes @useboom/skills-setup when a v* tag is pushed. The skills themselves
+# reach users through the marketplace (commit-SHA versioned, auto-update), so this
+# only releases the installer.
+#
+#   cd packages/skills-setup && npm version patch
+#   git commit -am "chore(release): skills-setup vX.Y.Z" && git tag vX.Y.Z
+#   git push --follow-tags
+#
+# Needs an NPM_TOKEN repo secret (npm automation token for the useboom org).
+# Provenance requires publishing from CI, so don't publish from a laptop.
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+  id-token: write # npm provenance
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: node scripts/validate.mjs
+      - name: Smoke test the installer
+        run: |
+          node packages/skills-setup/bin/cli.mjs --help
+          node packages/skills-setup/bin/cli.mjs --print --yes --settings /tmp/smoke.json
+      - run: npm publish --access public --provenance
+        working-directory: packages/skills-setup
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

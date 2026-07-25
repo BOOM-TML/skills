@@ -6,26 +6,71 @@ Agent Skills that teach Claude how to run customer research on [Boom](https://us
 
 ## Install
 
-### Option 1 — skills CLI (any agent)
+### Option 1 — one command (Claude Code, skills + MCP + auto-update)
 
 ```bash
-npx skills@latest add BOOM-TML/skills
+npx @useboom/skills-setup
 ```
 
-Pick the skills you want and the agent(s) to install them for.
+It asks who the skills are for, then writes the marketplace and plugin into your
+Claude Code settings with **auto-update on**, so new skills and fixes reach you
+without reinstalling. Start Claude Code, confirm the install prompt, and sign in
+to Boom when it opens. There's no API key to create: the MCP server uses your
+Boom login.
 
-### Option 2 — Claude Code plugin (skills + Boom MCP in one step)
+Auto-update is why the command exists. Marketplaces other than Anthropic's own
+arrive with auto-update off, and no `claude plugin` flag turns it on, so the
+value has to be written into settings:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "boom": {
+      "source": { "source": "github", "repo": "BOOM-TML/skills" },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": { "boom@boom": true }
+}
+```
+
+Paste that yourself if you'd rather not run the installer. `~/.claude/settings.json`
+covers every project on your machine; a committed `.claude/settings.json` covers a
+repo and its team.
+
+### Option 2 — the `/plugin` menu (no files to edit)
 
 ```
 /plugin marketplace add BOOM-TML/skills
 /plugin install boom
 ```
 
-The plugin also configures Boom's MCP server. Set your API key first:
+Then open **Marketplaces → boom → Enable auto-update**, or new skills won't
+reach you.
+
+### Option 3 — skills CLI, skills only (any agent)
 
 ```bash
-export BOOM_API_KEY=boom_sk_...   # create one in Boom → Settings → API Keys
+npx skills@latest add BOOM-TML/skills
 ```
+
+Pick the skills you want and the agent(s) to install them for. This copies the
+skill files without Boom's MCP server and without auto-update, so connect the
+MCP separately (see below) and re-run the command to update.
+
+### The MCP server
+
+Options 1 and 2 configure it for you. Everywhere else, point your tool at:
+
+```
+https://www.useboom.ai/mcp
+```
+
+Use that exact URL. Claude Code matches plugin-provided servers to manually
+configured ones **by endpoint**, so an identical URL means one connection
+instead of two copies of the same tools. Access follows your Boom login, and
+[docs.useboom.ai/use-mcp](https://docs.useboom.ai/use-mcp) covers Cursor, VS
+Code, and the Claude app.
 
 ## How skills are named
 

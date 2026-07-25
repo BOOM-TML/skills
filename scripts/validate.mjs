@@ -48,10 +48,28 @@ const plugin = JSON.parse(readFileSync(join(root, "plugins/boom/.claude-plugin/p
 JSON.parse(readFileSync(join(root, "plugins/boom/.mcp.json"), "utf8"));
 if (marketplace.plugins?.[0]?.name !== plugin.name)
   errors.push("marketplace plugin name != plugin.json name");
-if (!/^\d+\.\d+\.\d+$/.test(plugin.version)) errors.push("plugin.json version is not semver");
+// version is optional: omitting it makes Claude Code use the commit SHA
+// (every push = a new version). If set, it must be semver.
+if (plugin.version !== undefined && !/^\d+\.\d+\.\d+$/.test(plugin.version))
+  errors.push("plugin.json version, if set, must be semver");
 
 // 3. Plugin skills symlink resolves to root skills/
 if (!existsSync(join(root, "plugins/boom/skills/"))) errors.push("plugins/boom/skills symlink broken");
+
+// 4. The installer's skill list matches skills/. It uses that list to find
+// pre-plugin copies left by the `skills` CLI; a stale list silently stops
+// migrating whichever skill is missing from it.
+const installerList = JSON.parse(
+  readFileSync(join(root, "packages/skills-setup/boom-skills.json"), "utf8"),
+);
+const missing = skillFolders.filter((f) => !installerList.includes(f));
+const extra = installerList.filter((n) => !skillFolders.includes(n));
+if (missing.length || extra.length)
+  errors.push(
+    `packages/skills-setup/boom-skills.json out of sync with skills/${
+      missing.length ? ` (missing: ${missing.join(", ")})` : ""
+    }${extra.length ? ` (unknown: ${extra.join(", ")})` : ""}`,
+  );
 
 if (errors.length) {
   console.error("FAIL:\n" + errors.map((e) => `  - ${e}`).join("\n"));
