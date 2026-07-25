@@ -1,6 +1,6 @@
 {
   "name": "@useboom/skills-setup",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "One command to set up Boom's Claude Code skills, with auto-update.",
   "type": "module",
   "bin": {
