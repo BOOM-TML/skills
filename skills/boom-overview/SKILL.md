@@ -53,6 +53,10 @@ Segment / CSV / API  ──►  Participants  ──►  Initiative  ──►  
 7. **Enroll & launch** — add participants, start outreach → `launch-initiative` / `manage-participants`
 8. **Read the results** — summaries, transcripts, themes → `analyze-results`
 
+## When a customer writes first, no initiative involved
+
+Inbound has no authoring skill because there's nothing to author: when a customer messages your WhatsApp number without being enrolled anywhere, the same central agent answers with the same knowledge base, and can escalate to a person at any point, same as in outreach. There's no journey, no trigger, no first message someone designed, it starts because the customer decided to write. Whether it answers at all is a per-channel setting with an org-level fallback, configured in the Boom app; with no answering agent configured, the message is stored and nothing replies, by design. Don't route a support-shaped ask to `launch-initiative`, that skill starts a *new* mission with its own audience and trigger, which is the wrong shape for a conversation that already started itself. Read one back the same way `analyze-results` reads any conversation.
+
 ## Which skill do I need?
 
 | The user wants to… | Skill |
@@ -66,6 +70,7 @@ Segment / CSV / API  ──►  Participants  ──►  Initiative  ──►  
 | Design follow-up rounds, branching, timing | `design-journey` |
 | Add/stop/inspect people in a running initiative | `manage-participants` |
 | Summarize what an initiative learned | `analyze-results` |
+| A customer wrote in first, no campaign involved | this one, see above; there's no authoring skill for it |
 
 ## Permissions & guardrails
 

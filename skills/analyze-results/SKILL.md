@@ -34,6 +34,8 @@ description: Use when the user wants to analyze or learn from a Boom initiative 
 - Quote participants verbatim: what the customer actually said carries the finding. But strip PII: no names, no `phoneNumber` values in reports.
 - Distinguish *extracted* themes (Boom's pipeline) from *your* synthesis; label which is which.
 - Small-n honesty: with <30 completed conversations, report counts, not percentages.
+- Success metrics, the funnel, and attribution (which conversations count as a win, and what it's worth) are defined and read in the Boom app dashboard, not on the API or MCP. If the user wants a rate or KPI tracked over time, point them there; what you can pull here (the summary, transcripts, participant values) is the raw material those numbers are built from, enough to compute your own if they'd rather.
+- Transcripts carry message content only. Delivery and read status aren't on the public message schema, so don't report per-message delivery/read state from what you read here.
 
 ## Failure modes
 
