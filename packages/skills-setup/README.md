@@ -39,6 +39,7 @@ file up to `settings.json.bak` first):
 | --- | --- |
 | `--scope <user\|project>` | Write to `~/.claude/settings.json` (default) or `./.claude/settings.json` |
 | `--auto-update` / `--no-auto-update` | Force auto-update on/off (default: on) |
+| `--no-clean` | Keep pre-plugin copies from `npx skills add` where they are |
 | `--settings <path>` | Target a specific settings file (advanced/testing) |
 | `--yes`, `-y` | Accept defaults, no prompts (scriptable) |
 | `--print` | Show the resulting settings without writing (dry run) |
@@ -48,6 +49,23 @@ Non-interactive example (CI, dotfiles):
 ```bash
 npx @useboom/skills-setup --yes --scope user
 ```
+
+## Upgrading from `npx skills add`
+
+If you installed the skills the old way, you have **copies** in
+`.agents/skills/<name>/` symlinked from `.claude/skills/<name>`, and those copies
+never update. Beside the plugin they'd give you every Boom skill twice, under two
+names (`analyze-results` and `boom:analyze-results`), and Claude picks a skill by
+its description, so it can quietly reach for the stale one.
+
+The installer handles that. It finds those copies, moves them into a
+`.boom-skills-backup-<date>/` folder next to where they lived, and drops only our
+entries from `skills-lock.json` (anything from another publisher stays). Nothing
+is deleted, so you can drag a folder back if you disagree. Skip it with
+`--no-clean`.
+
+Copies it can't attribute to Boom, which is what global installs look like since
+they write no lockfile, are reported and left alone rather than guessed at.
 
 ## Notes
 

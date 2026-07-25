@@ -7,7 +7,8 @@
     "boom-skills-setup": "bin/cli.mjs"
   },
   "files": [
-    "bin"
+    "bin",
+    "boom-skills.json"
   ],
   "engines": {
     "node": ">=18"

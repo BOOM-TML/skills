@@ -4,9 +4,18 @@
 // auto-update — by safely merging into the user's Claude Code settings.json.
 // Zero dependencies on purpose: fast `npx`, nothing to audit.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 import process from 'node:process';
@@ -14,6 +23,15 @@ import process from 'node:process';
 const MARKETPLACE = 'boom';
 const PLUGIN_REF = 'boom@boom';
 const REPO = 'BOOM-TML/skills';
+
+// Skill names we publish, kept in sync with the repo's skills/ directory by
+// scripts/validate.mjs. Used only to spot pre-plugin copies left behind by the
+// `skills` CLI, never to decide what the plugin installs.
+const BOOM_SKILLS = new Set(
+  JSON.parse(
+    readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'boom-skills.json'), 'utf8'),
+  ),
+);
 
 const c = {
   reset: '\x1b[0m',
@@ -37,6 +55,7 @@ Options:
   --scope <user|project>   Where to write settings (default: user, ~/.claude)
   --auto-update            Enable auto-update (default; skills stay current)
   --no-auto-update         Install once, update manually later
+  --no-clean               Keep pre-plugin copies from \`npx skills add\` in place
   --settings <path>        Write to a specific settings.json (advanced/testing)
   --yes, -y                Accept defaults, no prompts (scriptable)
   --print                  Show the resulting settings without writing (dry run)
@@ -81,6 +100,91 @@ function applyBoom(settings, { autoUpdate }) {
   return next;
 }
 
+// --- Migrating away from the `skills` CLI ------------------------------------
+//
+// Before the plugin existed, customers installed with `npx skills add
+// BOOM-TML/skills`, which copies each skill into <root>/.agents/skills/<name>/
+// and symlinks it from <root>/.claude/skills/<name>. Those copies never update.
+// Left in place next to the plugin, every Boom skill exists twice under two
+// names (`analyze-results` and `boom:analyze-results`), and Claude picks by
+// description, so it can silently reach for the stale one.
+//
+// We only move copies we can attribute to Boom, and we move rather than delete,
+// so a wrong guess costs the user nothing but a folder to drag back.
+
+function readLock(lockPath) {
+  if (!existsSync(lockPath)) return null;
+  try {
+    const lock = JSON.parse(readFileSync(lockPath, 'utf8'));
+    return lock && typeof lock.skills === 'object' ? lock : null;
+  } catch {
+    return null; // a lock we can't parse is a lock we don't touch
+  }
+}
+
+// A copy is "locked" when skills-lock.json says it came from our repo — proof,
+// not a guess. Otherwise it's a name match inside the CLI's own storage: likely
+// ours (global installs write no lockfile at all) but not provable.
+function findLegacyCopies(roots) {
+  const found = [];
+  for (const root of roots) {
+    const lockPath = join(root, 'skills-lock.json');
+    const lock = readLock(lockPath);
+    const filesRoot = join(root, '.agents', 'skills');
+    if (!existsSync(filesRoot)) continue;
+
+    for (const name of BOOM_SKILLS) {
+      const filesDir = join(filesRoot, name);
+      if (!existsSync(filesDir)) continue;
+      const entry = lock?.skills?.[name];
+      const locked = typeof entry?.source === 'string' && entry.source.includes(REPO);
+      found.push({
+        root,
+        name,
+        filesDir,
+        link: join(root, '.claude', 'skills', name),
+        lockPath: lock ? lockPath : null,
+        locked,
+      });
+    }
+  }
+  return found;
+}
+
+function migrateCopies(copies, stamp) {
+  const moved = [];
+  const lockPaths = new Set();
+  for (const copy of copies) {
+    const backupDir = join(copy.root, `.boom-skills-backup-${stamp}`);
+    mkdirSync(backupDir, { recursive: true });
+    renameSync(copy.filesDir, join(backupDir, copy.name));
+
+    // The symlink in .claude/skills now dangles. It has to go by unlink, not
+    // rmSync: rmSync resolves the link, finds nothing there, and silently
+    // succeeds without removing anything, leaving Claude Code a broken skill.
+    // A real directory instead of a link is a copy in its own right, so it
+    // follows the files into the backup.
+    const stat = lstatSync(copy.link, { throwIfNoEntry: false });
+    if (stat?.isSymbolicLink()) unlinkSync(copy.link);
+    else if (stat) renameSync(copy.link, join(backupDir, `${copy.name}-claude-dir`));
+    if (copy.lockPath) lockPaths.add(copy.lockPath);
+    moved.push({ ...copy, backupDir });
+  }
+
+  // Drop only our entries from each lockfile; anything else in there belongs to
+  // another publisher and stays exactly as it was.
+  for (const lockPath of lockPaths) {
+    const lock = readLock(lockPath);
+    if (!lock) continue;
+    writeFileSync(`${lockPath}.bak`, readFileSync(lockPath));
+    for (const copy of moved) {
+      if (copy.lockPath === lockPath) delete lock.skills[copy.name];
+    }
+    writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`);
+  }
+  return moved;
+}
+
 async function ask(rl, question, fallback) {
   if (!rl) return fallback;
   const a = (await rl.question(question)).trim();
@@ -93,6 +197,8 @@ async function main() {
       scope: { type: 'string' },
       'auto-update': { type: 'boolean' },
       'no-auto-update': { type: 'boolean' },
+      clean: { type: 'boolean' },
+      'no-clean': { type: 'boolean' },
       settings: { type: 'string' },
       yes: { type: 'boolean', short: 'y' },
       print: { type: 'boolean' },
@@ -102,6 +208,9 @@ async function main() {
   });
 
   if (values.help) return help();
+
+  // undefined means "decide for me": migrate provable copies, ask when we can.
+  const cleanFlag = values['no-clean'] ? false : values.clean ? true : undefined;
 
   const interactive =
     !values.yes && !values.print && process.stdin.isTTY && process.stdout.isTTY;
@@ -142,10 +251,50 @@ async function main() {
     const updated = applyBoom(current, { autoUpdate });
     const json = `${JSON.stringify(updated, null, 2)}\n`;
 
+    // 3) Pre-plugin copies from the `skills` CLI, which would otherwise sit
+    //    beside the plugin as stale duplicates.
+    const legacy = cleanFlag === false ? [] : findLegacyCopies([process.cwd(), homedir()]);
+    const provable = legacy.filter((l) => l.locked);
+    const unprovable = legacy.filter((l) => !l.locked);
+    let clean = provable.length > 0;
+
     if (values.print) {
       console.log(paint(`\n// ${path}`, c.dim));
       console.log(json);
+      if (legacy.length) {
+        console.log(paint(`// would move ${provable.length} pre-plugin copies:`, c.dim));
+        for (const l of provable) console.log(paint(`//   ${l.filesDir}`, c.dim));
+      }
       return;
+    }
+
+    if (legacy.length && rl) {
+      console.log(
+        `\n  ${paint('Found skills installed the old way', c.bold)} (npx skills add), which don't\n` +
+          `  auto-update. Left in place you'd have each skill twice: ${paint('analyze-results', c.dim)}\n` +
+          `  and ${paint('boom:analyze-results', c.dim)}.\n`,
+      );
+      for (const l of provable) console.log(`    • ${l.name}  ${paint(l.filesDir, c.dim)}`);
+      if (provable.length) {
+        const ans = await ask(
+          rl,
+          `\n${paint('?', c.cyan)} Move those aside (reversible, kept in a backup folder)? ${paint('(Y/n)', c.dim)}: `,
+          'y',
+        );
+        clean = !/^n/i.test(ans);
+      }
+    }
+
+    // Always surface the ones we won't touch, prompt or no prompt: staying quiet
+    // here is how someone ends up with a stale duplicate they never knew about.
+    for (const l of unprovable) {
+      console.log(
+        paint(
+          `! ${l.name} at ${l.filesDir} looks like ours, but no lockfile says so.\n` +
+            `  Leaving it alone — check it yourself, and remove it if it's the old copy.`,
+          c.yellow,
+        ),
+      );
     }
 
     // Confirm (interactive only)
@@ -154,7 +303,8 @@ async function main() {
         `\n  ${paint('Will update', c.bold)} ${path}\n` +
           `    • marketplace ${paint(REPO, c.cyan)}\n` +
           `    • plugin ${paint(PLUGIN_REF, c.cyan)} enabled\n` +
-          `    • auto-update ${autoUpdate ? paint('on', c.green) : paint('off', c.yellow)}\n`,
+          `    • auto-update ${autoUpdate ? paint('on', c.green) : paint('off', c.yellow)}\n` +
+          (clean ? `    • ${provable.length} old copies moved to a backup folder\n` : ''),
       );
       const ok = await ask(rl, `${paint('?', c.cyan)} Write these changes? ${paint('(Y/n)', c.dim)}: `, 'y');
       if (/^n/i.test(ok)) {
@@ -173,6 +323,24 @@ async function main() {
     writeFileSync(path, json);
 
     console.log(paint(`\n✓ Done — wrote ${path}`, c.green));
+
+    if (clean) {
+      const moved = migrateCopies(provable, new Date().toISOString().slice(0, 10));
+      const folders = [...new Set(moved.map((m) => m.backupDir))];
+      console.log(
+        paint(`✓ Moved ${moved.length} pre-plugin copies aside, so nothing is duplicated.`, c.green),
+      );
+      for (const folder of folders) console.log(paint(`  kept at ${folder}`, c.dim));
+    } else if (provable.length) {
+      console.log(
+        paint(
+          `! Left ${provable.length} pre-plugin copies in place. Each Boom skill will exist twice\n` +
+            `  until you remove them (npx skills remove), and the old copies never update.`,
+          c.yellow,
+        ),
+      );
+    }
+
     console.log(
       `\nNext:\n` +
         `  1. Restart Claude Code (so it picks up the new settings).\n` +
