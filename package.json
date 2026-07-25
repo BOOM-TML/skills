@@ -1,0 +1,19 @@
+{
+  "name": "@useboom/skills-setup",
+  "version": "0.1.0",
+  "description": "One-command setup for Boom's Agent Skills: registers the marketplace, enables the plugin, and turns on auto-update.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "skills-setup": "scripts/setup.mjs"
+  },
+  "files": ["scripts/setup.mjs"],
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BOOM-TML/skills.git"
+  },
+  "homepage": "https://docs.useboom.ai/skills"
+}

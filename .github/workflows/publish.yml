@@ -1,0 +1,27 @@
+name: publish
+# Publishes @useboom/skills-setup when a v* tag is pushed. The skills themselves
+# ship through the marketplace (auto-update), so this only releases the installer.
+#
+#   npm version patch && git push --follow-tags
+#
+# Needs an NPM_TOKEN repo secret (npm automation token for the useboom org).
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+  id-token: write # npm provenance
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - run: node scripts/validate.mjs
+      - run: node scripts/setup.mjs --help
+      - run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

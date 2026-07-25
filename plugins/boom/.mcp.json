@@ -2,10 +2,7 @@
   "mcpServers": {
     "boom": {
       "type": "http",
-      "url": "https://mcp.useboom.ai/mcp",
-      "headers": {
-        "Authorization": "Bearer ${BOOM_API_KEY}"
-      }
+      "url": "https://www.useboom.ai/mcp"
     }
   }
 }
