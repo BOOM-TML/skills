@@ -1,6 +1,6 @@
 ---
 name: manage-participants
-description: Use when the user wants to add people to an EXISTING Boom initiative, check who has replied or a participant's status, stop outreach to someone, or read one participant's conversation. Participants always belong to an initiative — there is no global list and no delete (stopping retains data). To create and launch a brand-new initiative, use launch-research-initiative.
+description: Use when the user wants to add people to an EXISTING Boom initiative, check who has replied or a participant's status, stop outreach to someone, or read one participant's conversation. Participants always belong to an initiative — there is no global list and no delete (stopping retains data). To create and launch a brand-new initiative, use launch-initiative.
 ---
 
 # Manage Participants
@@ -27,7 +27,7 @@ description: Use when the user wants to add people to an EXISTING Boom initiativ
 1. Confirm the target initiative (`initiatives_list` / user link).
 2. Shape rows as `{ "phoneNumber": "+5215512345678", "name": "...", "lastName": "...", ...attributes }` — extra attributes become interview context the agent can use.
 3. Call `initiatives_participants_add`. Compare the accepted count to what you sent: DNC-suppressed people are skipped server-side. **Report the delta; never retry suppressed entries.**
-4. This is an admin-scoped operation on MCP — on `error.code: "forbidden"`, tell the user to use an admin key or the Boom app.
+4. This one needs org admin — on `error.code: "forbidden"`, tell the user their Boom account isn't an admin of the organization, so they need an admin to run it or to do it from the Boom app.
 
 ## Workflow: monitoring & stopping
 
@@ -39,7 +39,7 @@ description: Use when the user wants to add people to an EXISTING Boom initiativ
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `error.code: "forbidden"` | Non-admin key on an outreach write | Admin key or Boom app |
+| `error.code: "forbidden"` | The signed-in user isn't an org admin, and this write sends real messages | An org admin runs it, or do it from the Boom app |
 | Person missing after add | DNC suppression | Expected; report, don't retry |
 | `next_cursor` keeps returning | You're re-sending the first-page call | Pass the *previous response's* cursor each time; stop at `null` |
 

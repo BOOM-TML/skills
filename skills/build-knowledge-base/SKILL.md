@@ -1,6 +1,6 @@
 ---
 name: build-knowledge-base
-description: Use when a Boom customer needs to prepare the context for their AI agent — the durable brand identity (brand, voice, glossary, product, customers, guardrails) plus a brief per use case (research, churn recovery, data collection). Runs a guided interview, researches the company's own website when given a URL, and outputs a structured markdown bundle to hand to Boom. Triggers on "build our knowledge base", "prepare our context for Boom", "onboard our agent".
+description: Use when a Boom customer needs to prepare the context for their AI agent: the durable brand identity (brand, voice, glossary, product, customers, guardrails) plus a brief per job (win-back, support, research, onboarding, lead qualification, data collection). Runs a guided interview, researches the company's own website when given a URL, and outputs a structured markdown bundle to hand to Boom. Triggers on "build our knowledge base", "prepare our context for Boom", "onboard our agent".
 ---
 
 # Build your knowledge base

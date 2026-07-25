@@ -8,7 +8,7 @@
     {
       "name": "boom",
       "source": "./plugins/boom",
-      "description": "Boom MCP server + skills for running AI-led customer research (initiatives, participants, transcripts, CDP segments)."
+      "description": "Boom's MCP server + skills for running AI conversations with your customers: initiatives, flows, segments, the CDP, and the data extracted from every conversation."
     }
   ]
 }

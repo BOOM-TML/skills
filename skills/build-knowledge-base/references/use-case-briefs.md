@@ -10,8 +10,9 @@ assumptions that don't fit the runtime. So capture the **envelope and the intent
 keep internal specifics out.
 
 Ask **one question at a time**, same as the identity interview. Pre-fill from research
-where you can. Below: for each of Boom's three use cases, the brief questions and the
-file template.
+where you can. Below are the brief questions and file template for each of Boom's
+common use cases. These are the common ones; other jobs are possible and follow the
+same shape, brief questions plus a template.
 
 ---
 
@@ -28,6 +29,7 @@ people stay or leave, reactions to a feature.
 - Should the agent say it's for research, and how should it describe itself if asked "are you a bot?"
 - Anything it should flag for your team afterward (a competitor mentioned, a specific complaint)?
 - Anything off-limits in these conversations?
+- Which few facts should every conversation come back with as data you can count or export? (each one becomes a typed field: yes/no, a number, a choice from a list, or free text.)
 
 **Template:**
 ```markdown
@@ -54,6 +56,12 @@ people stay or leave, reactions to a feature.
 
 ## Off-limits
 <topics to avoid — or "none">
+
+## What to extract
+- <field>: yes/no
+- <field>: <choice, e.g. option a / option b / other>
+- <field>: number
+- summary: free text
 ```
 
 ---
@@ -68,6 +76,7 @@ people stay or leave, reactions to a feature.
 - Who decides the specific offer for each customer — is it precomputed on your side, or should the agent always hand off for the offer?
 - When must the agent **stop and hand off to a human**? (high-value account, asks for more than the envelope, billing dispute, a complaint.)
 - When the customer says yes, what happens next — who actually applies it, and what may the agent promise (and not promise)?
+- Which few facts should every conversation come back with as data you can count or export? (each one becomes a typed field: yes/no, a number, a choice from a list, or free text.)
 - **What should the agent never say?** (internal account tiers, coupon codes, margins, internal system names — confirm these stay out.)
 - How hard should it push? (recommended: gentle, no pressure, a "no" respected.)
 
@@ -104,6 +113,11 @@ matrices.
 
 ## Tone
 Gentle, subtle, no pressure; a "no" is respected on the first pass.
+
+## What to extract
+- accepted_offer: yes/no
+- reason_for_leaving: <choice, e.g. price / missing feature / bad experience / other>
+- would_return_if: free text
 ```
 
 ---
@@ -121,6 +135,7 @@ specific information.
 - What counts as **success**, and what happens then (hand off to sales, book a slot, confirm)?
 - When must it hand off to a human?
 - Any data it must NOT ask for or store?
+- Which few facts should every conversation come back with as data you can count or export? (each one becomes a typed field: yes/no, a number, a choice from a list, or free text.)
 
 **Template:**
 ```markdown
@@ -147,6 +162,204 @@ specific information.
 
 ## Never collect / store
 <sensitive data to avoid — or "none">
+
+## What to extract
+- completed: yes/no
+- <each field you set out to collect>: <its type>
+- blocker: <choice or free text, why it wasn't completed>
+```
+
+---
+
+## Support → `use-cases/support.md`
+
+**When it applies:** they want the agent to answer inbound questions and resolve
+issues customers already have, escalating what it shouldn't handle.
+
+**Brief questions:**
+- What is the agent trying to resolve on its own, and what stays with a person no matter what?
+- Who does it talk to? (any customer who reaches out, or a specific tier/segment.)
+- What can it actually do to close the loop, answer from a known set of answers, look something up, apply a simple fix?
+- When must the agent **stop and hand off to a human**? (an upset customer, a safety or billing dispute, anything outside the list above, a fix it can't confirm worked.)
+- **What should the agent never say?** (a guarantee it can't back, internal ticket or system names, blaming another team.)
+- What should the conversation capture as structured data afterward (resolved or not, a category, a short summary)?
+
+**Template:**
+```markdown
+# Use case: Support (<Brand>)
+
+## Goal
+Answer inbound questions and resolve what it can on its own.
+
+## Who it talks to
+<any customer who reaches out / a specific tier or segment>
+
+## What it can resolve on its own
+<the known answers, lookups, or simple fixes it's allowed to do>
+
+## What stays with a person
+<what it must not attempt itself>
+
+## Escalate / hand off when
+- <upset or frustrated customer>
+- <safety, legal, or billing dispute>
+- <anything outside the list above>
+- <a fix it can't confirm worked>
+
+## Never say
+<guarantees it can't back, internal ticket/system names, blame on another team>
+
+## What to extract
+- issue_resolved: yes/no
+- category: <choice, e.g. billing / product / account / other>
+- escalated: yes/no
+- summary: free text
+```
+
+---
+
+## Onboarding / activation → `use-cases/onboarding.md`
+
+**When it applies:** they want to get a new customer to their first real value and
+unblock them if they stall.
+
+**Brief questions:**
+- What does "activated" mean here, the one thing that tells you they're set up?
+- Who does it talk to, and when does it reach out? (right after signup, after a few days of no activity.)
+- What are the steps it should walk them through, in your words?
+- Where do people usually get stuck, and what can the agent do at each point?
+- What can it do on its own (send a link, mark a step done, resend an invite) versus what needs a person?
+- When must it **hand off to a human**?
+- What should the conversation capture as structured data afterward (activated or not, where they got stuck)?
+
+**Template:**
+```markdown
+# Use case: Onboarding / activation (<Brand>)
+
+## Goal
+Get a new customer to <the one thing that counts as activated>.
+
+## Who it talks to & when it reaches out
+<new signups / after N days of no activity>
+
+## Steps it walks them through
+- <step>
+- <step…>
+
+## Where people get stuck
+- <stuck point> → <what the agent can do about it>
+
+## What it can do on its own
+<send a link, mark a step complete, resend an invite>
+
+## Escalate / hand off when
+<…>
+
+## Never promise
+<…>
+
+## What to extract
+- activated: yes/no
+- stuck_at: <choice, the step name, or "none">
+- needs_follow_up: yes/no
+```
+
+---
+
+## Lead qualification → `use-cases/lead-qualification.md`
+
+**When it applies:** they want to qualify an inbound lead, capture the facts that
+decide fit, and book or hand off.
+
+**Brief questions:**
+- What makes someone a good fit? (company size, budget, timeline, use case, whatever actually decides it.)
+- Who does it talk to, and how do they arrive? (a form, an inbound message, someone we reached out to first.)
+- What exactly should it ask or confirm to qualify them?
+- What counts as **qualified**, and what happens then? (book a call, hand to sales, add to a list.)
+- What makes someone **not** a fit, and how should it close that out?
+- When must it **hand off to a human** instead of deciding itself?
+- **What should the agent never say?** (pricing it's not authorized to quote, promises about the product.)
+
+**Template:**
+```markdown
+# Use case: Lead qualification (<Brand>)
+
+## Goal
+Qualify an inbound lead and book or hand off.
+
+## Who it talks to & how they arrive
+<a form / inbound message / outbound-initiated>
+
+## Qualifying criteria
+<what actually makes someone a good fit>
+
+## What to ask or confirm
+- <field / question>
+- <field…>
+
+## Qualified means
+<the outcome> → then <book a call / hand to sales / add to a list>
+
+## Not a fit when
+<disqualification criteria> → <how to close it out>
+
+## Escalate / hand off when
+<…>
+
+## Never say
+<pricing it's not authorized to quote, product promises>
+
+## What to extract
+- qualified: yes/no
+- <criterion 1>: <type>
+- <criterion 2>: <type>
+- next_step: <choice: book call / handed to sales / disqualified>
+```
+
+---
+
+## NPS / post-purchase follow-up → `use-cases/nps-follow-up.md`
+
+**When it applies:** they want to act on a score just given, or reach out after a
+purchase, to understand the why and close the loop.
+
+**Brief questions:**
+- What triggers this conversation, a score just given, or a purchase just made?
+- Does treatment differ by score or event? (a detractor vs. a promoter, a first purchase vs. a repeat one.)
+- What is the agent actually trying to understand beyond the number?
+- For a low score or a problem raised, what can the agent do about it, and when does it hand off?
+- For a high score, is there anything worth asking for, kept light? (a review, a referral.)
+- **What should the agent never say?** (a promise to fix something it can't verify, defensiveness about the score.)
+- What should the conversation capture as structured data afterward (the score, the reason, whether follow-up is needed)?
+
+**Template:**
+```markdown
+# Use case: NPS / post-purchase follow-up (<Brand>)
+
+## Goal
+Understand the why behind a score or a purchase, and close the loop.
+
+## Trigger
+<a score just given / a purchase just made>
+
+## Treatment by segment
+- <detractor / low score> → <what the agent does>
+- <passive / neutral> → <what the agent does>
+- <promoter / high score> → <what the agent does, if anything>
+
+## What it's trying to understand
+<the why behind the number>
+
+## Escalate / hand off when
+<a specific complaint, a request it can't resolve, a high-value account>
+
+## Never say
+<a promise to fix something it can't verify, defensiveness about the score>
+
+## What to extract
+- score: number
+- reason: free text
+- follow_up_needed: yes/no
 ```
 
 ---

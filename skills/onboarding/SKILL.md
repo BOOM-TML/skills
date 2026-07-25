@@ -24,7 +24,7 @@ This skill runs a **guided, interactive first run**. You (the agent) walk a bran
 | `extraction_schema_set` | Define variables to pull from each conversation (later step) | admin |
 | `segments_list` / `segments_catalog` | Show how audiences work (later step, read-only) | read |
 
-Full mechanics live in the specific skills; link out rather than re-teaching: [`launch-research-initiative`](../launch-research-initiative/SKILL.md), [`design-journey`](../design-journey/SKILL.md), [`whatsapp-templates`](../whatsapp-templates/SKILL.md), [`cdp-and-segments`](../cdp-and-segments/SKILL.md).
+Full mechanics live in the specific skills; link out rather than re-teaching: [`launch-initiative`](../launch-initiative/SKILL.md), [`design-journey`](../design-journey/SKILL.md), [`whatsapp-templates`](../whatsapp-templates/SKILL.md), [`cdp-and-segments`](../cdp-and-segments/SKILL.md).
 
 ## Step 0 — What Boom is (60 seconds)
 

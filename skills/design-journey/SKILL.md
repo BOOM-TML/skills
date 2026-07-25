@@ -21,7 +21,7 @@ Your job with this skill: *build or debug the graph precisely*, then either publ
 | `journeys_create_draft` / `journeys_create_draft_from_published` | Start a new editable draft (blank or copied from the live version) | write |
 | `journeys_add_node` / `journeys_update_node` / `journeys_delete_node` | Add, edit, or remove a node | write |
 | `journeys_connect_nodes` / `journeys_disconnect_nodes` | Wire (or unwire) an edge on a specific signal handle | write |
-| `journeys_set_trigger` | Set how people enter (manual / segment / cdp_event) | write |
+| `journeys_set_trigger` | Set how people enter (manual / segment / cdp_event); segment triggers can't be wired from here, see step 4 below | write |
 | `journeys_update_draft` | Replace the whole draft definition at once | write |
 | `journeys_validate` | Check a draft against the publish rules without going live | read |
 | `journeys_publish` | Publish the draft — **this goes live to real customers**; confirm first | write |
@@ -47,6 +47,8 @@ Tool names follow `domain_action`; if a call fails with `tool_not_found`, list a
 
 For new journeys, prefer **`WAIT_FOR_REPLY` + `MANAGE_CONVERSATION`** over the legacy `CONVERSATION_BLOCK` — the split gives you separate handles for "never replied" (`TIMEOUT`) vs "replied then the AI closed the conversation" (`CLOSED`), which most follow-up logic needs.
 
+The visual builder also has an email-send node, outbound only with no reply of its own, that isn't in this table because it isn't in `journeys_authoring_catalog`: `journeys_add_node` can't create one. Build it in the app. There's also no email-template tool; `templates_create` / `templates_list` are WhatsApp only. A journey built with one in the app still runs and reads back fine here, and the one rule to know if you touch it: only a delay, an exit, or another non-conversational node may follow it, never a reply-driven one.
+
 Routing rule: an edge fires when its `sourceHandle` equals the signal the node emitted. **Every signal a node can emit must have exactly one outgoing edge** — this is the #1 publish error.
 
 ## Authoring workflow (MCP)
@@ -54,10 +56,10 @@ Routing rule: an edge fires when its `sourceHandle` equals the signal the node e
 1. **Learn the graph.** Call `journeys_authoring_catalog` for the node kinds and their inputs; `journeys_message_channels` / `journeys_message_templates` for the ids a SEND_MESSAGE needs; `journeys_message_variables` for the paths a template binding can reference; `journeys_condition_catalog` for DECISION predicate terms; `journeys_event_catalog` for valid event names.
 2. **Open a draft.** `journeys_create_draft` for a blank one, or `journeys_create_draft_from_published` to iterate on the live version. Only a DRAFT is editable; a PUBLISHED version is frozen.
 3. **Build the nodes.** `journeys_add_node` per node, `journeys_connect_nodes` per edge (name the `sourceHandle` — the signal the edge routes on). Positions are optional; the server auto-lays-out the graph.
-4. **Set the trigger** with `journeys_set_trigger` (manual / segment / cdp_event).
-5. **Bind template variables** on every SEND_MESSAGE (see below) — the most common thing to forget.
+4. **Set the trigger** with `journeys_set_trigger`. `manual` and `cdp_event` work fully from here. **`segment` does not**: it validates `segmentId` as the segment's internal id, and the public segment surface (`cdp-and-segments`) only exposes `slug`, so passing one fails `not_found`. Wire a segment trigger in the Boom app instead, everything else about the journey can still be built and published from here.
+5. **Bind template variables** on every SEND_MESSAGE (see below), the most common thing to forget.
 6. **Validate** with `journeys_validate` and fix every `error` (warnings are advisory).
-7. **Publish** with `journeys_publish` once validation is clean. **Publishing starts real outreach — get explicit confirmation from the user first.** Publishing a new version supersedes the previous one; versions are immutable.
+7. **Publish** with `journeys_publish` once validation is clean. **Publishing starts real outreach, get explicit confirmation from the user first.** Publishing a new version supersedes the previous one; versions are immutable. This works on any journey, whatever its steps send, so you can take a whole flow live from here. One shortcut: if the initiative is set to the WhatsApp channel, `initiatives_launch` (see `launch-initiative`) publishes the current draft for you, so you can skip this call in that case.
 
 You can also assemble the whole definition and send it in one `journeys_update_draft` call instead of node-by-node — useful when you already have the full graph designed.
 
@@ -91,7 +93,7 @@ Drafts can be incomplete; only **publish** requires a clean validation.
 
 ## Proven topologies (from production)
 
-**1. Single outbound + interview** (the auto-scaffold):
+**1. Single outbound + conversation** (the auto-scaffold):
 ```
 ENTRY ─SENT→ SEND_MESSAGE ─SENT→ WAIT_FOR_REPLY ─REPLIED→ MANAGE_CONVERSATION ─CLOSED→ EXIT(done)
                                         └─TIMEOUT→ EXIT(no_response)              └─STALE→ EXIT(stalled)

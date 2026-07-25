@@ -1,6 +1,6 @@
 ---
 name: analyze-results
-description: Use when the user wants to analyze or learn from a Boom initiative that is already running — "what did we learn?", "why are customers churning?", "summarize the interviews" — by reading the aggregate data summary and sampling participant transcripts to synthesize themes and insights. Read-only; safe with any key scope. To add, stop, or check individual participants instead, use manage-participants.
+description: Use when the user wants to analyze or learn from a Boom initiative that is already running — "what did we learn?", "why are customers churning?", "summarize the conversations", "what did we extract?" — by reading the aggregate data summary and sampling participant transcripts to synthesize themes and insights. Read-only, so it works for any member of the organization. To add, stop, or check individual participants instead, use manage-participants.
 ---
 
 # Analyze Initiative Results
@@ -16,8 +16,8 @@ description: Use when the user wants to analyze or learn from a Boom initiative 
 
 ## When to use
 
-- "What did we learn from X?", "why are customers churning?", "summarize the interviews".
-- Everything here is read-only — safe with any key scope.
+- "What did we learn from X?", "why are customers churning?", "summarize the conversations", "how many said yes?".
+- Everything here is read-only, so it works for any member of the organization.
 
 ## Workflow
 
@@ -25,15 +25,17 @@ description: Use when the user wants to analyze or learn from a Boom initiative 
 2. **Start with the aggregate** (`initiatives_summary`): completion counts, extracted themes, flagged conversations. Present this before diving into transcripts.
 3. **Sample transcripts deliberately** — don't read all of them. Pull via `initiatives_participant_messages_list`:
    - all *flagged* conversations (the initiative's `flagCondition` matched — each flag result carries the AI's reasoning, worth quoting),
-   - 5–10 completed interviews across different outcomes,
+   - 5–10 completed conversations across different outcomes,
    - a couple of drop-offs (where the participant went silent).
 4. **Synthesize.** Lead with the answer to the initiative's `objective`. Structure: top 3–5 themes with participant counts, verbatim quotes (attributed as "a participant", never by name/phone), contradictions worth a follow-up study, and recommended actions.
 
 ## Boom best practices
 
-- Quote participants verbatim — the interviews are the product. But strip PII: no names, no `phoneNumber` values in reports.
+- Quote participants verbatim: what the customer actually said carries the finding. But strip PII: no names, no `phoneNumber` values in reports.
 - Distinguish *extracted* themes (Boom's pipeline) from *your* synthesis; label which is which.
-- Small-n honesty: with <30 completed interviews, report counts, not percentages.
+- Small-n honesty: with <30 completed conversations, report counts, not percentages.
+- Success metrics, the funnel, and attribution (which conversations count as a win, and what it's worth) are defined and read in the Boom app dashboard, not on the API or MCP. If the user wants a rate or KPI tracked over time, point them there; what you can pull here (the summary, transcripts, participant values) is the raw material those numbers are built from, enough to compute your own if they'd rather.
+- Transcripts carry message content only. Delivery and read status aren't on the public message schema, so don't report per-message delivery/read state from what you read here.
 
 ## Failure modes
 
