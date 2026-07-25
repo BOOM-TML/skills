@@ -1,8 +1,10 @@
 # Boom Skills
 
-> **Beta** — these skills target Boom's MCP server, which is launching soon. Tool names may change before GA.
+Agent Skills that teach Claude how to operate [Boom](https://useboom.ai), the infrastructure for AI conversations with your customers.
 
-Agent Skills that teach Claude how to run customer research on [Boom](https://useboom.ai): launch AI-led customer interviews over WhatsApp and email, manage participants, and turn transcripts into insight — using Boom's MCP tools the way they were designed to be used.
+One central agent per organization does the talking, briefed from your knowledge base. You configure what each conversation is for, so the same pieces cover winning back customers who dropped off, support, product research, onboarding, qualifying leads, collecting documents, NPS follow-up and drip sequences. These skills teach Claude to build and run all of it through Boom's MCP tools: sync your data, build the audience, design the flow, get the opener approved, launch, and read back what customers said as structured data.
+
+WhatsApp is the conversational channel. Email is outbound only for now.
 
 ## Install
 
@@ -74,7 +76,7 @@ Code, and the Claude app.
 
 ## How skills are named
 
-Installed via the **plugin**, skills are automatically namespaced under the plugin, so they appear and can be invoked as `boom:<skill>` — e.g. `boom:launch-research-initiative`. You don't prefix the skill names yourself; the `boom:` comes from the plugin. Installed via the **`skills` CLI** (Option 1), they keep their bare names (`launch-research-initiative`).
+Installed via the **plugin**, skills are automatically namespaced under the plugin, so they appear and can be invoked as `boom:<skill>` — e.g. `boom:launch-initiative`. You don't prefix the skill names yourself; the `boom:` comes from the plugin. Installed via the **`skills` CLI** (Option 1), they keep their bare names (`launch-initiative`).
 
 Either way, Claude selects the right skill from its `description` — typing the name is optional. That's why the skill folders stay unprefixed: adding `boom-` manually would collide with the plugin's automatic `boom:` and produce `boom:boom-…`.
 
@@ -84,14 +86,14 @@ Either way, Claude selects the right skill from its `description` — typing the
 |---|---|
 | [`boom-overview`](skills/boom-overview/SKILL.md) | Get oriented: Boom's object model, lifecycle, and which skill to use when |
 | [`onboarding`](skills/onboarding/SKILL.md) | Brand new to Boom? A guided, hands-on first run — build your first journey, send a Hello World, and learn the mental model |
-| [`build-knowledge-base`](skills/build-knowledge-base/SKILL.md) | Prepare your agent context to hand to Boom — durable brand identity + a brief per use case (research, churn recovery, data collection). Guided interview + own-site research. |
+| [`build-knowledge-base`](skills/build-knowledge-base/SKILL.md) | Prepare the context your agent works from: durable brand identity, plus a brief per job. Guided interview + research on your own site. |
 | [`connect-your-data`](skills/connect-your-data/SKILL.md) | Sync your Postgres/MySQL/Shopify data into Boom's CDP (read-only user, SSH tunnel, mapping SQL) |
 | [`cdp-and-segments`](skills/cdp-and-segments/SKILL.md) | Query Boom's CDP and build segments to target |
-| [`launch-research-initiative`](skills/launch-research-initiative/SKILL.md) | Create and launch a customer research initiative end-to-end, with the context-authoring formula from Boom's best-performing initiatives |
+| [`launch-initiative`](skills/launch-initiative/SKILL.md) | Create and launch any initiative end-to-end, with the context-authoring formula from Boom's best performers |
 | [`whatsapp-templates`](skills/whatsapp-templates/SKILL.md) | Write WhatsApp openers that pass Meta review and earn replies |
 | [`design-journey`](skills/design-journey/SKILL.md) | Design or debug the workflow graph behind an initiative (follow-up rounds, branching, timing) |
 | [`manage-participants`](skills/manage-participants/SKILL.md) | Add, monitor, and stop participants in an initiative |
-| [`analyze-results`](skills/analyze-results/SKILL.md) | Turn initiative data and transcripts into insight |
+| [`analyze-results`](skills/analyze-results/SKILL.md) | Turn a running initiative's extracted data and transcripts into insight |
 
 ## Domain model
 

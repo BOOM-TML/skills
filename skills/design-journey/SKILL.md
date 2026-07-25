@@ -91,7 +91,7 @@ Drafts can be incomplete; only **publish** requires a clean validation.
 
 ## Proven topologies (from production)
 
-**1. Single outbound + interview** (the auto-scaffold):
+**1. Single outbound + conversation** (the auto-scaffold):
 ```
 ENTRY ─SENT→ SEND_MESSAGE ─SENT→ WAIT_FOR_REPLY ─REPLIED→ MANAGE_CONVERSATION ─CLOSED→ EXIT(done)
                                         └─TIMEOUT→ EXIT(no_response)              └─STALE→ EXIT(stalled)

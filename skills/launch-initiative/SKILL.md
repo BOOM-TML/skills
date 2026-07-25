@@ -1,11 +1,11 @@
 ---
-name: launch-research-initiative
-description: Use when the user wants to launch, start, or set up a NEW customer research initiative on Boom — AI-led interviews over WhatsApp or email to answer a product question (churn reasons, feature feedback, discovery, activation, NPS follow-up). Covers writing the objective/context/guiding questions, choosing a template and WhatsApp number, adding the first participants, and launching. For an initiative that already exists, use manage-participants or analyze-results instead.
+name: launch-initiative
+description: Use when the user wants to launch, start, or set up a NEW initiative on Boom, an AI conversation with a group of customers over WhatsApp, for any job: winning back customers who dropped off, qualifying leads, onboarding, collecting documents or data, NPS follow-up, product research. Covers the objective, context and guiding questions, the opening template, enrolling participants, and launching. For an initiative that already exists, use manage-participants or analyze-results.
 ---
 
-# Launch a Research Initiative
+# Launch an Initiative
 
-An initiative's quality is decided by three text fields — `objective`, `context`, and the guiding questions — because they are injected directly into the AI interviewer's prompt. This skill encodes how Boom's highest-performing production initiatives write them.
+An initiative is one mission: an audience, a goal, and the flow that carries it out. Its quality is decided by three text fields — `objective`, `context`, and the guiding questions — because they go straight into the agent's prompt. This skill encodes how Boom's highest-performing production initiatives write them, and the formulas hold whatever the job is.
 
 ## Tools used
 
@@ -23,19 +23,19 @@ An initiative's quality is decided by three text fields — `objective`, `contex
 
 ## When to use / when not to
 
-- Use for a *research or learning* goal: churn reasons, feature feedback, activation blockers, discovery.
-- NOT for one-off broadcasts or support replies — initiatives run structured multi-turn interviews.
+- Use whenever a group of customers needs a real conversation with a goal: win back the ones who dropped off, qualify inbound leads, walk someone through onboarding, collect a missing document, follow up an NPS score, understand why people churn.
+- NOT for a one-off blast. An initiative holds a multi-turn conversation and pursues an objective; if you only need to push a message, that's a flow with a send step (see `design-journey`).
 - Only reading existing results → `analyze-results`. Audience building → `cdp-and-segments`.
 
 ## Workflow
 
-1. **Clarify the decision.** One sentence: what decision will this research inform? Push back on survey-shaped asks — Boom does deep interviews with AI follow-ups.
+1. **Clarify the goal.** One sentence: what should be true when this initiative has run? A decision to inform, a customer recovered, a document collected, a lead qualified. Push back on survey-shaped asks: the agent holds a real conversation and follows up, so use that.
 2. **Draft the three core fields** using the formulas below. Show them to the user before creating anything.
 3. **Create** with `initiatives_create` — only `name` is required, but always send: `objective`, `context`, `guidingQuestions[]`, `language` (default `es`), `identityDeflection`, `flagCondition`, `maxAttempts`. It's created as **DRAFT**; a journey and outreach templates are auto-scaffolded from `maxAttempts`.
 4. **Attach the opener**: `whatsapp_numbers_list` → pick/create the template (see `whatsapp-templates`) → `initiatives_templates_set`. New templates take ~24–48h for Meta approval — create them early.
 5. **Enroll participants** (`initiatives_participants_add`, E.164 `phoneNumber`; per-participant `context` keys must match the initiative's `contextSchema`).
 6. **Verify** with `initiatives_get`; read back name/objective/template/participant count. **Launching messages real customers — get explicit confirmation.**
-7. **Launch** with `initiatives_launch` (admin key).
+7. **Launch** with `initiatives_launch` (requires org admin).
 
 ## Writing the `objective` (≤2000 chars; aim for 1–3 sentences)
 
@@ -89,7 +89,7 @@ Pattern from winners: Q1 = the core "why" (DEEP), Q2 = reaction to the concrete 
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `forbidden` on participants/launch | Key not admin-scoped | Ask for an admin key or launch from the Boom app |
+| `forbidden` on participants/launch | The signed-in user isn't an org admin | An org admin runs it, or launch from the Boom app |
 | `initiatives_update` rejected | Initiative left DRAFT | Only DRAFT is editable; changes after activation go through the app |
 | Template stuck in PENDING | Meta review (~24–48h) | Create templates first; check back with `templates_list` |
 | Participant `context` rejected | Keys don't match `contextSchema` | Align keys exactly (case-sensitive) |

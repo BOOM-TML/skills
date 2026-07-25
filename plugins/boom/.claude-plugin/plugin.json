@@ -1,5 +1,8 @@
 {
   "name": "boom",
-  "description": "Skills + MCP config for Boom (useboom.ai): launch customer research initiatives, manage participants, analyze transcripts, query the CDP.",
-  "author": { "name": "Boom", "url": "https://useboom.ai" }
+  "description": "Skills + MCP config for Boom (useboom.ai): design flows, launch initiatives over WhatsApp, manage participants, query the CDP, and pull structured data out of every conversation.",
+  "author": {
+    "name": "Boom",
+    "url": "https://useboom.ai"
+  }
 }
