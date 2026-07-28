@@ -32,12 +32,34 @@ An initiative is one mission: an audience, a goal, and the flow that carries it 
 
 1. **Clarify the goal.** One sentence: what should be true when this initiative has run? A decision to inform, a customer recovered, a document collected, a lead qualified. Push back on survey-shaped asks: the agent holds a real conversation and follows up, so use that.
 2. **Draft the three core fields** using the formulas below. Show them to the user before creating anything.
-3. **Create** with `initiatives_create` — only `name` is required, but always send: `objective`, `context`, `guidingQuestions[]`, `language` (default `es`), `identityDeflection`, `flagCondition`, `maxAttempts`. It's created as **DRAFT**; a journey and outreach templates are auto-scaffolded from `maxAttempts`.
-4. **Attach the opener**: `whatsapp_numbers_list` → pick/create the template (see `whatsapp-templates`) → `initiatives_templates_set`. New templates take ~24–48h for Meta approval — create them early.
-5. **Set the extraction schema before launching**, if the mission needs structured fields back (`extraction_schema_set`). A conversation is extracted against whichever schema was current when it ran, and a closed conversation can't be re-extracted under new fields via the API, so declare it now rather than after the first results come in. Six field types (`bool`, `int`, `enum`, `enum[]`, `string`, `string[]`); `topic`, `problem`, and `competitor` are reserved slugs that get rejected. Each field's `description` is the instruction the model reads to fill it, not a label, so write it like a briefing. Extraction only runs on conversations with at least 3 messages and 1 inbound reply: a cold audience that stays silent yields no fields for whoever never answers.
-6. **Enroll participants** (`initiatives_participants_add`, E.164 `phoneNumber`; per-participant `context` keys must match the initiative's `contextSchema`).
-7. **Verify** with `initiatives_get`; read back name/objective/template/participant count. **Launching messages real customers, get explicit confirmation.**
-8. **Launch** with `initiatives_launch` (requires org admin). When the initiative is set to the WhatsApp channel, this also publishes its journey, so no separate `journeys_publish` is needed. Any journey can be published from MCP on its own with `journeys_publish` (see `design-journey`), which is what you use for a flow you shaped yourself.
+3. **Create** with `initiatives_create` — only `name` is required, but always send: `objective`, `context`, `guidingQuestions[]`, `language` (default `es`), `identityDeflection`, `flagCondition`, `maxAttempts`. It's created as **DRAFT** with **no journey**: nothing is scaffolded for you.
+   - **Guiding questions are write-once.** `initiatives_update` cannot change them and there is no delete capability, so a wrong question list means cancelling the initiative and rebuilding it. Settle the questions with the user *before* this call.
+   - **The name must be unique in the org.** A duplicate currently fails as a bare `Internal error`, not a clean conflict, so check `initiatives_list` first.
+4. **Build the journey** — `journeys_create_draft`, then `journeys_validate` (see `design-journey`). An initiative created over MCP or REST has no journey until you make one, and it cannot launch without one.
+5. **Attach the opener**: `whatsapp_numbers_list` → pick/create the template (see `whatsapp-templates`) → `initiatives_templates_set`. New templates take ~24–48h for Meta approval — create them early.
+6. **Set the extraction schema before launching**, if the mission needs structured fields back (`extraction_schema_set`). A conversation is extracted against whichever schema was current when it ran, and a closed conversation can't be re-extracted under new fields via the API, so declare it now rather than after the first results come in. Six field types (`bool`, `int`, `enum`, `enum[]`, `string`, `string[]`); `topic`, `problem`, and `competitor` are reserved slugs that get rejected. Each field's `description` is the instruction the model reads to fill it, not a label, so write it like a briefing. Extraction only runs on conversations with at least 3 messages and 1 inbound reply: a cold audience that stays silent yields no fields for whoever never answers.
+7. **Verify** with `initiatives_get`; read back name/objective/template/journey. **The next two steps message real customers, get explicit confirmation.**
+8. **Launch** with `initiatives_launch` (requires org admin). This flips DRAFT → ACTIVE and, on the WhatsApp channel, publishes the journey for you, so no separate `journeys_publish` is needed. Launching with nobody enrolled sends nothing, which is what makes the next step safe to stage.
+9. **Enroll participants** (`initiatives_participants_add`) — **after launch, not before.** Enrollment requires an ACTIVE initiative and a published journey; on a DRAFT it fails with `initiative_not_active`. Each person added **receives a real message immediately**, so enroll one test contact first, confirm it arrives and reads correctly, then add the rest.
+
+## Enrolling people
+
+**Phone format differs by surface, and each one rejects the other's.** `initiatives_participants_add` wants E.164 **with** the leading `+` (`+573001234567`). The CSV upload in the app wants **bare digits, no `+`**, 10 to 15 of them. Same number, two spellings — format for the door you're walking through.
+
+**To enroll a list in bulk, use `initiatives_participants_add`** (up to 500 people per call). It works even when the journey's `ENTRY` is event-triggered, because enrollment doesn't check what the trigger declares. Do **not** reach for `cdp_events_batch_record` to start people in bulk: the batch endpoint deliberately does not fire journey enrollment, so you would load hundreds of events and enroll nobody, with no error to tell you. Only the single-event endpoint enrolls.
+
+**DNC is enforced server-side.** A lower participant count than the list you sent means suppression. Report the delta and never retry those entries.
+
+## Giving the agent per-participant data
+
+The initiative `context` is a **static briefing, not a template** — nothing in it is interpolated, so writing "adapt to `{{plan}}`" there gets you literal text and no value. Per-participant data reaches the conversation through two places instead:
+
+| Where you put it | How it arrives | When to use |
+|---|---|---|
+| Participant `context` at enrollment (CSV columns, `participants_add`) | Rendered to the agent as that person's own data, labelled with your `contextSchema` descriptions | The default. Use it whenever the audience arrives as a list |
+| The triggering event's `properties` | Frozen at enrollment and rendered as workflow state | Event-triggered flows, where your system already knows the values |
+
+Then **reference those field names in the `context` briefing** so the agent knows they exist and what to do with them — the values arrive as data, the instruction for using them is yours to write. Say what to do with each value, and say what not to do with it: "use it to calibrate the question, never quote the number back to them" is the kind of line that keeps a personalized opener from reading like surveillance.
 
 ## Writing the `objective` (≤2000 chars; aim for 1–3 sentences)
 
@@ -77,13 +99,13 @@ Pattern from winners: Q1 = the core "why" (DEEP), Q2 = reaction to the concrete 
 
 - **`identityDeflection`** — how the agent answers "are you a bot?". Honest + warm + human-oversight works best in production: *"Sí, soy un bot pero del bueno 😊 — todas las respuestas las lee una persona del equipo, y tu opinión de verdad nos ayuda a mejorar."* Never instruct it to deny being an AI.
 - **`flagCondition`** — natural-language condition that flags a conversation for human review. Flag *actionable* moments, not sentiment: "el usuario expresa que aún le interesa obtener su préstamo", "menciona una mala práctica del asesor". One condition, concrete and observable.
-- **`maxAttempts`** (1–5, default 3) — outreach rounds; the auto-scaffolded journey gets one follow-up template per extra round.
-- **`contextSchema`** — declares per-participant variables (e.g. `{"credit_line": "monto de línea aprobada"}`). Participant `context` keys are validated against it; the agent can then personalize. Keep keys snake_case and short.
+- **`maxAttempts`** (1–5, default 3) — how many outreach rounds this mission gets. It sizes nothing on its own: you build the journey to match, with one approved follow-up template per extra round.
+- **`contextSchema`** — declares the per-participant variables you pass at enrollment (e.g. `{"credit_line": "monto de línea aprobada"}`). **Not settable over MCP or REST**: it is written by the CSV-upload flow in the Boom app, or derived automatically from the first enrolled participant's attributes if it was never set. It *is* enforced either way — `initiatives_participants_add` rejects any `context` key that isn't in it. Two consequences worth planning around: if you enroll over the API into an initiative with no schema, whoever lands first silently defines the allowed keys for everyone after them (capped at 50), and any key you forgot is rejected rather than ignored. Keep keys snake_case and short.
 - **End conditions** — `endConditionType`: `MANUAL` (default), `DATE` (+`endDate`), or `RESPONSE_COUNT` (+`endResponseTarget`). `isRecurring` + `reportCadence` (`WEEKLY`/`BIWEEKLY`/`MONTHLY`) for always-on programs.
 
 ## Boom best practices
 
-- 50–300 participants per batch; WhatsApp response rates far exceed email.
+- 50–300 participants per batch. WhatsApp response rates far exceed email, but **what actually moves the rate is who the audience is, not how many** — set the expectation from the relationship, not the list size. An active customer answers far more than someone who churned; someone who churned two days ago answers far more than someone who churned two months ago. Production spans roughly 70–90% on warm, current audiences down to the mid-20s on people who left a while back, and a cold cohort landing at 25% is the normal result, not a failure. Say the number out loud before launch so nobody reads a healthy run as a bad one.
 - Spanish (`es`) is the default and >98% of production volume; write all agent-facing text in the participant's language.
 - DNC is enforced server-side — a lower participant count than the list you sent means suppression; report the delta, never retry those entries.
 
@@ -92,7 +114,11 @@ Pattern from winners: Q1 = the core "why" (DEEP), Q2 = reaction to the concrete 
 | Symptom | Cause | Fix |
 |---|---|---|
 | `forbidden` on participants/launch | The signed-in user isn't an org admin | An org admin runs it, or launch from the Boom app |
+| `initiative_not_active` on `participants_add` | You enrolled before launching | Launch first, then enroll — see step 9 |
+| Bare `Internal error` on `initiatives_create` | Almost always a duplicate initiative name in the org | Check `initiatives_list` and pick another name. The underlying uniqueness conflict isn't mapped to a clean error yet |
 | `initiatives_update` rejected | Initiative left DRAFT | Only DRAFT is editable; changes after activation go through the app |
+| `guidingQuestions` ignored on update | They can only be set at creation | No public edit path — cancel and recreate, or fix it in the app |
+| Launch succeeds, then no message arrives | A round's template was still `PENDING` when that round fired | **Nothing checks template approval before sending.** `journeys_validate`, publish and launch all pass with unapproved templates; the failure only appears per-send, as free text on the step, with no error code. Confirm every round is `APPROVED` with `templates_list` before you enroll anyone |
 | `409 initiative_not_draft` on launch | Already launched, or cancelled/archived | Only a DRAFT launches |
 | `422 no_outreach_template` on launch | Round one has no approved, active WhatsApp template linked | Approve/attach one first, see `whatsapp-templates` |
 | `422 journey_not_ready` on launch | The journey behind it failed validation at publish | The response lists the issues; fix them with `design-journey`'s tools and launch again |

@@ -18,7 +18,9 @@ Every WhatsApp conversation on Boom opens with a **template pre-approved by Meta
 
 ## Creating a template — the contract
 
-`templates_create` needs: `name` (unique per number, snake_case), `language` (WhatsApp code: `es_MX`, `en_US` — not bare `es`), `category`, `contentType`, `content`, `variables`, optional `phoneNumbers[]` (E.164; **omitting uses only the org's first active number**). Approval is **async**: it returns PENDING; re-check with `templates_list` later — never poll in a loop.
+`templates_create` needs: `name` (unique per number, snake_case), `language`, `category`, `contentType`, `content`, `variables`, optional `phoneNumbers[]` (E.164; **omitting uses only the org's first active number**). Approval is **async**: it returns PENDING; re-check with `templates_list` later — never poll in a loop.
+
+**`language` takes the bare code for most languages** — `es`, `en`. A regional variant like `es_MX` or `en_US` is accepted but normalized down to its base, so the two are equivalent and `es` is the canonical form. The exceptions are **`pt` and `zh`, which require a region suffix** (`pt_BR`, `pt_PT`, `zh_CN`) because Meta rejects the bare code.
 
 ### Content shape per `contentType`
 
