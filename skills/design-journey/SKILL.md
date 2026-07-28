@@ -93,20 +93,43 @@ Drafts can be incomplete; only **publish** requires a clean validation.
 
 ## Proven topologies (from production)
 
-**1. Single outbound + conversation** (the auto-scaffold):
+**1. Single outbound + conversation** (the simplest shape):
 ```
 ENTRY ─SENT→ SEND_MESSAGE ─SENT→ WAIT_FOR_REPLY ─REPLIED→ MANAGE_CONVERSATION ─CLOSED→ EXIT(done)
                                         └─TIMEOUT→ EXIT(no_response)              └─STALE→ EXIT(stalled)
 ```
 
-**2. Multi-round follow-up** (re-contact non-responders):
+**2. Open the send window before the first message** (use this on almost every outbound flow):
 ```
-… WAIT_FOR_REPLY ─TIMEOUT→ DELAY(2d) ─SENT→ SEND_MESSAGE(round 2) ─SENT→ WAIT_FOR_REPLY ─… (round 3)
-        └─REPLIED→ MANAGE_CONVERSATION ─CLOSED→ EXIT
+ENTRY ─SENT→ DELAY(until_weekday: Mon–Fri, 10:00–11:00) ─SENT→ SEND_MESSAGE(round 1) ─SENT→ …
 ```
-Each round uses its own approved follow-up template. Space rounds 1–3 days apart.
+Enrollment and outreach become two separate decisions. You can load the whole audience whenever it suits you (the night before, in pieces, while templates are still in review) and everyone parks at the gate until the window opens, instead of getting messaged the moment they land. A run that reaches this node while the window is already open continues immediately, so it costs nothing when you enroll during business hours.
 
-**3. Attribute-personalized opener** (branch before sending):
+`DELAY` in `until_weekday` mode takes `weekdays` (ISO, 1=Mon), `windowStartMinutes`/`windowEndMinutes` (minutes past local midnight, so 600–660 is 10:00–11:00), and an optional IANA `timezone` that **defaults to the organization's timezone** — set it explicitly when the audience isn't in the org's home timezone. If a run becomes eligible after the window closed, it waits for the next allowed weekday rather than sending late.
+
+Prefer a **generous window** over a tight one. A one-hour window means any queue drift pushes the send a full day; a 9:00–18:00 window sends the same morning and only slips to the next day if it genuinely has to.
+
+**3. Multi-round follow-up** (re-contact non-responders). **How you space the rounds depends on whether the campaign runs once or forever, and getting this wrong silently double-messages people.**
+
+The rule behind it: a `DELAY` is a **pure wait — it does not race an incoming reply**. Someone who answers while parked on a `DELAY` still gets answered by the AI (that pipeline is independent of the journey), but the graph never learns about it, so the next round fires anyway. Only `WAIT_FOR_REPLY` and `MANAGE_CONVERSATION` listen.
+
+*One-time campaigns* (research, win-back, a single cohort) — put the **whole gap inside `WAIT_FOR_REPLY`** so every hour between rounds is connected to an agent block:
+```
+… SEND_MESSAGE(r1) ─SENT→ WAIT_FOR_REPLY(6h) ─TIMEOUT→ SEND_MESSAGE(r2) ─SENT→ WAIT_FOR_REPLY(20h) ─TIMEOUT→ SEND_MESSAGE(r3) → …
+                                  └─REPLIED→ MANAGE_CONVERSATION ─CLOSED→ EXIT
+```
+Size each timeout to the real clock gap you want: a 10:00 opener, a 16:00 nudge and a next-day-noon last touch is `6h` then `20h`. No `DELAY` between rounds at all.
+
+*Recurring campaigns* — you can't do that, because you need a `DELAY` to place the next send in an acceptable window (an audience that hits round 2 on a Friday evening should not be messaged on Saturday). So give `WAIT_FOR_REPLY` **enough time to actually catch a reply, six to eight hours minimum**, and only then hand off to the `DELAY` that carries the run into the next window:
+```
+… SEND_MESSAGE(r1) ─SENT→ WAIT_FOR_REPLY(8h) ─TIMEOUT→ DELAY(until_weekday, next window) ─SENT→ SEND_MESSAGE(r2) → …
+                                  └─REPLIED→ MANAGE_CONVERSATION ─CLOSED→ EXIT
+```
+The residual risk is real but bounded: someone replying during that `DELAY` gets a follow-up they didn't need. Shrinking the `DELAY` doesn't fix it, lengthening the `WAIT_FOR_REPLY` does.
+
+Each round needs its own approved follow-up template.
+
+**4. Attribute-personalized opener** (branch before sending):
 ```
 ENTRY ─SENT→ CASE(attributes.plan) ─case:pro→ SEND_MESSAGE(template_pro) ─┐
                        ├─case:basic→ SEND_MESSAGE(template_basic) ────────┼→ WAIT_FOR_REPLY → …
@@ -114,13 +137,15 @@ ENTRY ─SENT→ CASE(attributes.plan) ─case:pro→ SEND_MESSAGE(template_pro)
 ```
 Use CASE for a **small** fork on a single attribute (plan, language, party size). For anything bigger, don't cram multiple goals into one journey — see "One objective per initiative".
 
-**4. Always-on, segment-triggered**:
+**5. Always-on, segment-triggered**:
 ```
 ENTRY(segment: "churned last month", maxEnrollments 1 per 90d) ─SENT→ …
 ```
 People entering the segment enroll automatically; the frequency cap prevents re-contacting the same person too often. Pair with `isRecurring` + `reportCadence` on the initiative.
 
-**5. Call an external system, then hand off** (chaining):
+An `ENTRY` can also be `cdp_event`-triggered, which lets your own system decide the moment someone starts. **Know the tradeoff before you reach for it on a list you already have:** an event-triggered enrollment carries only the event's own `properties`, and it never fills in the per-participant context that enrolling from a list does, so any field you were counting on won't be there unless you put it in the event payload yourself. When the audience arrives as a spreadsheet, uploading it through the CSV flow (or `initiatives_participants_add`) is the better choice, because that path carries the columns through. Reach for the event trigger when the *timing* genuinely belongs to your system, not as a way to stage a list. Pattern 2 already gives you staging without giving up per-participant data.
+
+**6. Call an external system, then hand off** (chaining):
 ```
 … MANAGE_CONVERSATION ─CLOSED→ HTTP_REQUEST(POST the collected data to your API) ─SUCCESS→ DISPATCH_EVENT(done) ─SENT→ EXIT(nextInitiativeId: next)
                                                                                   └─FAILED→ EXIT(needs_review)
@@ -137,9 +162,9 @@ To keep a person out of two conflicting initiatives at once, two mechanisms help
 
 Before publishing (or handing over a spec), verify:
 1. Every `WAIT_FOR_REPLY` / `MANAGE_CONVERSATION` / `DECISION` / `CASE` / `HTTP_REQUEST` has **all** its signals wired (the TIMEOUT / FAILED paths are the ones people forget).
-2. Every `SEND_MESSAGE` names an **APPROVED** template and a channel id, and **binds every template placeholder** (`templateBindings`).
+2. Every `SEND_MESSAGE` names an **APPROVED** template and a channel id, and **binds every template placeholder** (`templateBindings`). Check the approval status yourself before you save — a clean `journeys_validate` is not a promise that every template is ready to send.
 3. Follow-up templates exist for every round (round 2..N need their own approved template).
-4. DELAY timezones are IANA (`America/Mexico_City`) and windows respect the audience's waking hours.
+4. DELAY windows respect the audience's waking hours, and the `timezone` is right — it falls back to the **organization's** timezone, which is not always the audience's. Set it explicitly when they differ.
 5. Segment-triggered ENTRY has a frequency cap unless the user explicitly wants unlimited re-enrollment.
 6. EXIT `outcome` labels are meaningful (`recovered`, `no_response`) — they show up in analysis.
 

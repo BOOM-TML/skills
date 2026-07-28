@@ -37,7 +37,7 @@ Segment / CSV / API  ──►  Participants  ──►  Initiative  ──►  
 
 - **Initiative** — one mission. Carries its `objective`, a Markdown `context` briefing the agent, guiding questions, and lifecycle (`DRAFT → ACTIVE → COMPLETED`). Everything hangs off it.
 - **Participant** — one person enrolled in one initiative. No global list, no delete (stopping retains data).
-- **Journey** — the workflow graph behind the initiative (send template → wait → AI conversation → follow-ups). Auto-scaffolded on creation; **authored and published via MCP** (create draft → add/connect nodes → validate → publish) or edited in Boom's visual builder — both act on the same graph.
+- **Journey** — the workflow graph behind the initiative (send template → wait → AI conversation → follow-ups). A new initiative starts **without one**; you **author and publish it via MCP** (create draft → add/connect nodes → validate → publish) or build it in Boom's visual builder — both act on the same graph.
 - **Template** — a WhatsApp opener pre-approved by Meta (~24–48h review). Required to start any WhatsApp conversation.
 - **Segment / CDP** — persons, custom objects, and events; segments are saved filters that define WHO an initiative reaches.
 - **Extraction schema** — the typed fields (yes/no, number, choice, free text) the initiative pulls out of its conversations. This is how talk becomes structured data you can export or segment on, for any kind of conversation.
