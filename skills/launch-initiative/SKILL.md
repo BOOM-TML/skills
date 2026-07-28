@@ -54,12 +54,25 @@ An initiative is one mission: an audience, a goal, and the flow that carries it 
 
 The initiative `context` is a **static briefing, not a template** — nothing in it is interpolated, so writing "adapt to `{{plan}}`" there gets you literal text and no value. Per-participant data reaches the conversation through two places instead:
 
-| Where you put it | How it arrives | When to use |
+| Where you put it | How it arrives | Reliability |
 |---|---|---|
-| Participant `context` at enrollment (CSV columns, `participants_add`) | Rendered to the agent as that person's own data, labelled with your `contextSchema` descriptions | The default. Use it whenever the audience arrives as a list |
-| The triggering event's `properties` | Frozen at enrollment and rendered as workflow state | Event-triggered flows, where your system already knows the values |
+| Participant `context` at enrollment (CSV columns, `participants_add`) | Pushed into every turn as that person's own data, labelled with your `contextSchema` descriptions | **Unconditional.** The default, and what to use whenever the audience arrives as a list |
+| The triggering event's `properties` | Frozen at enrollment, pushed in as workflow state | **Unconditional.** For event-triggered flows, where your system already knows the values |
+| A CDP person attribute, fetched with `read_person` | The agent calls the tool mid-conversation and reads the attributes back | **Conditional** — see below |
 
-Then **reference those field names in the `context` briefing** so the agent knows they exist and what to do with them — the values arrive as data, the instruction for using them is yours to write. Say what to do with each value, and say what not to do with it: "use it to calibrate the question, never quote the number back to them" is the kind of line that keeps a personalized opener from reading like surveillance.
+Then **reference those field names in the `context` briefing** so the agent knows what to do with them — the values arrive as data, the instruction for using them is yours to write. Say what to do with each value, and say what not to do with it: "use it to calibrate the question, never quote the number back to them" is the kind of line that keeps a personalized opener from reading like surveillance.
+
+### The CDP path, and why it is not the default
+
+The agent *can* reach live CDP data: `read_person` returns a person's full `attributes`, the prompt hands it that person's id for free whenever the WhatsApp sender resolves unambiguously, and a data catalogue lists the attribute keys the organization has. That makes it genuinely useful for something the agent should look up *because the conversation went there*.
+
+It is the wrong tool for personalizing an opener, for three reasons worth knowing before you design around it:
+
+- **The tool is entitled per organization, and nothing is on by default.** If the org has no access row for `read_person`, the agent simply does not have it that turn, and there is no error to notice.
+- **The catalogue only lists the first few attribute keys inline** (alphabetically). Past that it tells the agent to ask for the full list, which is one more call the agent has to decide to make.
+- **Nothing forces the call.** Naming an attribute in the briefing does not make the model go fetch it. Models reliably call a tool they were told to call, and unreliably fetch a number nobody asked them for.
+
+So: if a value matters to **every** conversation, push it in at enrollment where it arrives unconditionally. If you do want a lookup, write the instruction as an imperative that names the tool — "before your opening line, call `read_person` for this customer and check `transaction_days_30d`" — rather than mentioning the field and hoping.
 
 ## Writing the `objective` (≤2000 chars; aim for 1–3 sentences)
 
