@@ -21,7 +21,7 @@ Your job with this skill: *build or debug the graph precisely*, then either publ
 | `journeys_create_draft` / `journeys_create_draft_from_published` | Start a new editable draft (blank or copied from the live version) | write |
 | `journeys_add_node` / `journeys_update_node` / `journeys_delete_node` | Add, edit, or remove a node | write |
 | `journeys_connect_nodes` / `journeys_disconnect_nodes` | Wire (or unwire) an edge on a specific signal handle | write |
-| `journeys_set_trigger` | Set how people enter (manual / segment / cdp_event); segment triggers can't be wired from here, see step 4 below | write |
+| `journeys_set_trigger` | Set how people enter (manual / segment / cdp_event) | write |
 | `journeys_update_draft` | Replace the whole draft definition at once | write |
 | `journeys_validate` | Check a draft against the publish rules without going live | read |
 | `journeys_publish` | Publish the draft — **this goes live to real customers**; confirm first | write |
@@ -39,11 +39,13 @@ Tool names follow `domain_action`; if a call fails with `tool_not_found`, list a
 | `MANAGE_CONVERSATION` | action | The AI-led conversation | `mode: AGENT \| ESCALATE`, optional `inactivityTimeout` (`1h`–`24h`) | `CLOSED`, `STALE`, + `INACTIVE` (only when `inactivityTimeout` is set) |
 | `CONVERSATION_BLOCK` | action | **Legacy** combined wait + AI conversation | `mode`, `maxTimeout`, `goal` | `CLOSED`, `TIMEOUT`, `STALE` |
 | `DELAY` | logic | Wait | `mode: duration` (`2d`) \| `until_date` (ISO instant) \| `until_weekday` (weekdays + time window + IANA timezone) | `SENT` |
-| `DECISION` | logic | Two-way branch | `logic: AND \| OR` + conditions: person attribute predicate, event occurred, custom-object match, or a runtime value | `YES`, `NO` |
-| `CASE` | logic | Multi-way switch on one person attribute (≤10 branches) | `selectionPath` + `branches[]`; a wired **default** is mandatory | `case:<branchId>` + `case:default` |
+| `DECISION` | logic | Two-way branch | `logic: AND \| OR` + conditions: person attribute predicate, event occurred, custom-object match, or a runtime value. Reads `engagement.workflowState.*`, `engagement.extracted.*`, `engagement.nodeOutputs.*` | `YES`, `NO` |
+| `CASE` | logic | Multi-way switch on one attribute (≤10 branches) | `selectionPath` + `branches[]`; a wired **default** is mandatory. Reads `attributes.*`, `engagement.extracted.*`, `engagement.nodeOutputs.*` | `case:<branchId>` + `case:default` |
 | `HTTP_REQUEST` | action | Call an external endpoint (your API / a webhook) | `method`, `url` (supports `{{variable}}`), `headers`, `body`, `credentialId`, `timeoutMs` (≤30s), `maxAttempts` (≤5) | `SUCCESS`, `FAILED` |
 | `DISPATCH_EVENT` | action | Record a CDP event for the person | `eventName`, static or bound `properties` | `SENT` |
 | `EXIT` | terminal | End the journey | optional `outcome` label; optional `nextInitiativeId` to chain into another initiative | — |
+
+**`CASE` cannot read `engagement.workflowState.*`**, so it cannot switch on data that arrived with the segment or the event. That is exactly the shape a branch-by-reason flow wants (a failed payment's error code, a shipment's carrier), and the fix is to chain `DECISION` nodes, which do read it. Reach for `CASE` when you are switching on a person attribute or on something the conversation extracted.
 
 For new journeys, prefer **`WAIT_FOR_REPLY` + `MANAGE_CONVERSATION`** over the legacy `CONVERSATION_BLOCK` — the split gives you separate handles for "never replied" (`TIMEOUT`) vs "replied then the AI closed the conversation" (`CLOSED`), which most follow-up logic needs.
 
@@ -56,7 +58,7 @@ Routing rule: an edge fires when its `sourceHandle` equals the signal the node e
 1. **Learn the graph.** Call `journeys_authoring_catalog` for the node kinds and their inputs; `journeys_message_channels` / `journeys_message_templates` for the ids a SEND_MESSAGE needs; `journeys_message_variables` for the paths a template binding can reference; `journeys_condition_catalog` for DECISION predicate terms; `journeys_event_catalog` for valid event names.
 2. **Open a draft.** `journeys_create_draft` for a blank one, or `journeys_create_draft_from_published` to iterate on the live version. Only a DRAFT is editable; a PUBLISHED version is frozen.
 3. **Build the nodes.** `journeys_add_node` per node, `journeys_connect_nodes` per edge (name the `sourceHandle` — the signal the edge routes on). Positions are optional; the server auto-lays-out the graph.
-4. **Set the trigger** with `journeys_set_trigger`. `manual` and `cdp_event` work fully from here. **`segment` does not**: it validates `segmentId` as the segment's internal id, and the public segment surface (`cdp-and-segments`) only exposes `slug`, so passing one fails `not_found`. Wire a segment trigger in the Boom app instead, everything else about the journey can still be built and published from here.
+4. **Set the trigger** with `journeys_set_trigger`. All three types work from here. A `segment` trigger takes `segmentId` = the segment's **`id`**, the value `segments_create` and `segments_list` return next to the slug; passing the slug fails with `unknown_segment`. Then **verify it resolved: call `journeys_message_variables` and confirm a `SEGMENT_OUTPUT` group comes back.** That group is what carries the segment's projected columns into every message, and when the trigger does not resolve it is simply absent, with no error. Run this check on every segment-triggered journey before you publish.
 5. **Bind template variables** on every SEND_MESSAGE (see below), the most common thing to forget.
 6. **Validate** with `journeys_validate` and fix every `error` (warnings are advisory).
 7. **Publish** with `journeys_publish` once validation is clean. **Publishing starts real outreach, get explicit confirmation from the user first.** Publishing a new version supersedes the previous one; versions are immutable. This works on any journey, whatever its steps send, so you can take a whole flow live from here. One shortcut: if the initiative is set to the WhatsApp channel, `initiatives_launch` (see `launch-initiative`) publishes the current draft for you, so you can skip this call in that case.
@@ -73,9 +75,28 @@ A SEND_MESSAGE references an approved template that has placeholders (`{{1}}`, `
 |---|---|---|
 | `customer.<field>` | Built-in contact fields | `customer.name`, `customer.phoneNumber` |
 | `person.<key>` | **Custom person attributes** (from people upsert / your CDP) | `person.bank`, `person.plan` |
-| run-produced values | Answers extracted in the conversation, or event/segment data carried into the run | copy the exact `path` from `journeys_message_variables` |
+| `engagement.workflowState.<key>` | What the trigger delivered: the event's properties, or the segment's projected columns, frozen at enrollment | `engagement.workflowState.plan` |
+| `engagement.context.<key>` | Per-participant data you supplied at enrollment, against the initiative's context schema | `engagement.context.cohort` |
+| `engagement.extracted.<key>` | An answer the conversation extracted, available to steps after it | `engagement.extracted.churn_reason` |
+| `engagement.nodeOutputs.<nodeId>.<key>` | An earlier `HTTP_REQUEST`'s response | `…<nodeId>.body.result` |
 
-So a binding is **not** always `person.*` — built-in fields are `customer.*`, and extracted/event/segment data has its own paths that `journeys_message_variables` returns.
+So a binding is **not** always `person.*`. Built-in fields are `customer.*`, and extracted, event and segment data lives under `engagement.*`.
+
+### Three ways a binding fails without failing
+
+`journeys_validate` checks that a path is *reachable*, not that it will *carry data*. All three of these validate clean.
+
+**The path is not offered for this trigger.** The set of variables is not the same for a manual, segment, and event trigger, and the catalog is the only reliable answer. Run `journeys_message_variables` **on that journey** and confirm the exact path appears. Two cases worth knowing: a segment trigger only offers `SEGMENT_OUTPUT` when the trigger actually resolved (see step 4), and the initiative-context group is offered on segment triggers too even though it resolves blank there, which its own description says.
+
+**The path is offered but the data is empty.** `customer.name` is offered for every trigger, and that is a statement about the path, not the column. It reads the contact's `name`, which is populated by list enrollment, so a contact Boom knows only from WhatsApp can have it blank while the display name is set. Same story for any person attribute: coverage is usually split by how the person arrived. **Measure it before you bind**, with `segments_preview` and `<attribute> is_null` over the real audience (see `cdp-and-segments`). A blank slot in a greeting is a brand's first impression.
+
+**The segment does not project it.** `engagement.workflowState.<type>.0.<attribute>` resolves only if the segment's `outputColumns` project that type and attribute, and `.0` is decided by the projection's `orderBy`. Without `orderBy` it is the first object by internal id, which is arbitrary, so someone with two open orders gets told about the wrong one. The variable's own description in the catalog tells you which case you are in: it names the ordering attribute when there is one, and says it resolves the first object by internal id when there is not. Read that description, it is the cheapest check available.
+
+### Check the shape of the value, not just that it exists
+
+A binding can resolve perfectly and still produce a broken message, because the slot has a shape. The one that bites is a URL button: the template declares a static domain with the variable as the trailing path (`https://shop.com/{{1}}`). Boom strips the declared prefix off the bound value when the value starts with it, so binding a full URL works. It is a literal string match though, so a value on `www.shop.com` or on `http://` when the template says `https://` is not recognized, and the domain doubles into a dead link. Nothing warns you at authoring or publish time, and the message still gets replies, so it does not show up in conversation metrics either.
+
+When the value is a URL you do not control the exact form of, put it in the **body** instead of the button. The body applies no transformation, WhatsApp makes it clickable anyway, and a full URL is safe there. Just do not leave it as the last thing in the body (see `whatsapp-templates`). To check a binding's shape before sending, read one real value: `cdp_events_list` or `cdp_custom_objects_list` on a row that would enroll.
 
 > ⚠️ A custom person attribute is `person.<key>` (e.g. `person.bank`) — **not** `attributes.bank` and **not** `customer.attributes.bank`. `attributes.<key>` is the DECISION/CASE **condition** syntax (from `journeys_condition_catalog`); it does not resolve in a message binding and the message will arrive blank. `journeys_validate` now rejects such a binding before publish.
 
@@ -89,7 +110,18 @@ So a binding is **not** always `person.*` — built-in fields are `customer.*`, 
 - Timeouts and durations use the `30m` / `24h` / `3d` format; DELAY `until_date` must be in the future; DELAY timezones must be valid IANA zones.
 - Foot-gun warnings: a `DISPATCH_EVENT` emitting the same event the ENTRY listens to (self-trigger loop), or an event that both enrolls and cancels the run.
 
+- A `cdp_predicate` condition's value has to match the shape its operator wants, and this **is** checked, both when you write the node and at publish. A relative date operator takes an object (`{"unit":"days","amount":7}`); a scalar comparison takes a string (`"true"`, `"2"`). An operator that does not apply to the attribute's type is rejected too. (Note the asymmetry with segment filters, where values go in raw. Same concept, different surface.)
+
 Drafts can be incomplete; only **publish** requires a clean validation.
+
+### What a clean validation does not tell you
+
+Validation is about the graph, not about the world. **A journey can validate clean, publish, enroll people, and send nothing at all.** Two causes, both real:
+
+- **The conditions compare against values the data never produces.** A guard testing an error code against a vocabulary the upstream system does not use sends everybody down the NO branch, straight to the exit, with no message and no error. Verify the vocabulary against the actual data before you write the comparison, never against another vendor's documentation. A `cdp_predicate` term can also be tested on its own by running the same condition as a filter in `segments_preview`, which persists nothing.
+- **The templates are not approved.** Nothing in the publish path checks a WhatsApp template's approval status: a journey referencing a PENDING or REJECTED template publishes fine, and the send is what refuses. Check the status yourself.
+
+So after publishing, watch the first real runs. A campaign that enrolls people and closes them out with zero messages sent is this failure, and the only thing that reports it is the participant data.
 
 ## Proven topologies (from production)
 
@@ -158,6 +190,28 @@ An initiative's conversation is run by the AI toward the **single objective** yo
 
 To keep a person out of two conflicting initiatives at once, two mechanisms help: a `DECISION` guard right before an action (re-check the person's current status; exit if they've moved on), and journey-level `cancelOnEvents` (cancel an in-flight run when a status event arrives). Pick whichever fits — the guard is explicit and easy to reason about.
 
+## When a flow needs an arc, and when one message is the whole job
+
+Two shapes, and they are designed differently.
+
+**A transactional flow carries a fact the person is waiting for**: your order shipped, your payment failed, your appointment is tomorrow. One message is the whole job. The reply matters (the agent answers it), but the flow does not need to branch on it. Adding rounds here is noise.
+
+**A relationship flow is trying to learn something**: how the product is working out, why they stopped, what they would want next. Here the test of whether you built anything is mechanical: **if what the person answers does not change what happens next, the flow is a notifier with a chatbot attached.** That is worth being blunt about with the user, because the fix is one node, not a rewrite.
+
+The mechanism, end to end:
+
+```
+a guiding question, or a field in the extraction schema
+        ↓
+engagement.extracted.<field>
+        ↓
+DECISION on whether it is set
+        ↓
+two templates: one that uses what they said, one that asks again
+```
+
+That is what makes a later message read as though a person wrote it. It also needs somewhere to land, which is why a relationship flow wants two or three touches rather than one: **what a conversation extracts is scoped to that initiative** and cannot be read by another one, so a single-touch relationship flow throws away the only thing it collected. Flattening such a flow to one message does not cost a message, it costs the point.
+
 ## Design review checklist
 
 Before publishing (or handing over a spec), verify:
@@ -165,8 +219,10 @@ Before publishing (or handing over a spec), verify:
 2. Every `SEND_MESSAGE` names an **APPROVED** template and a channel id, and **binds every template placeholder** (`templateBindings`). Check the approval status yourself before you save — a clean `journeys_validate` is not a promise that every template is ready to send.
 3. Follow-up templates exist for every round (round 2..N need their own approved template).
 4. DELAY windows respect the audience's waking hours, and the `timezone` is right — it falls back to the **organization's** timezone, which is not always the audience's. Set it explicitly when they differ.
-5. Segment-triggered ENTRY has a frequency cap unless the user explicitly wants unlimited re-enrollment.
+5. Segment-triggered ENTRY has a frequency cap unless the user explicitly wants unlimited re-enrollment, **and `journeys_message_variables` returns a `SEGMENT_OUTPUT` group**.
 6. EXIT `outcome` labels are meaningful (`recovered`, `no_response`) — they show up in analysis.
+7. Every bound attribute has measured coverage over the real audience, and every bound value has a checked shape (a URL is the one that bites).
+8. Every guard compares against a vocabulary you read out of the data, not one you assumed.
 
 ## Debugging a live journey
 
@@ -175,5 +231,8 @@ Before publishing (or handing over a spec), verify:
 - **"Message arrived with blank / `{{1}}` values"** → `templateBindings` is missing on the SEND_MESSAGE node, **or** a binding uses a path the resolver can't reach (e.g. `attributes.bank` / `customer.attributes.bank` instead of `person.bank`). Check each binding against `journeys_message_variables`; `journeys_validate` flags an unresolvable path.
 - **"Some people got nothing"** → a CASE value with no matching branch falling to an unwired default, or Do Not Contact suppression (expected, server-side).
 - **"Person enrolled twice"** → segment-triggered ENTRY without `maxEnrollments` / `enrollmentWindow`.
+- **"People enter and leave without a single message"** → a guard comparing against a value the data never produces, sending everyone down the branch that exits. Read a real row and check the vocabulary. See "What a clean validation does not tell you".
+- **"The message says nothing about their order"** → the segment trigger did not resolve, so there is no `SEGMENT_OUTPUT` to bind. Re-set the trigger with the segment's `id` and re-check the variable catalog.
+- **"The link in the button is dead"** → the bound URL's domain does not match the template's declared prefix character for character, so it was not stripped and the domain doubled. Move the link to the body.
 
 See [`CONTEXT.md`](../../CONTEXT.md) for the domain model. Template authoring: [`whatsapp-templates`](../whatsapp-templates/SKILL.md). Segments: [`cdp-and-segments`](../cdp-and-segments/SKILL.md).
