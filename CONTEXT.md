@@ -18,7 +18,7 @@ Two things a customer sees that live outside this API: the **shared inbox**, whe
 
 ## Vocabulary rules
 
-- The word is **participant** — never "engagement".
+- The word is **participant** — never "engagement". The one exception is technical: the run's own data paths are literally `engagement.workflowState.*`, `engagement.extracted.*`, `engagement.context.*` and `engagement.nodeOutputs.*`, and that is what `journeys_message_variables` returns. Write those paths exactly as they are, and keep calling the person a participant.
 - The only phone field is **`phoneNumber`** (E.164, e.g. `+5215512345678`).
 - Collections return `{ "data": [...], "next_cursor": "..." }` — pass `next_cursor` back to paginate; `null` means done.
 - Errors return `{ "error": { "code": "snake_case_code", "message": "..." } }`.
