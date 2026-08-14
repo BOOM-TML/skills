@@ -35,6 +35,7 @@ description: Use when the user wants to analyze or learn from a Boom initiative 
 - Distinguish *extracted* themes (Boom's pipeline) from *your* synthesis; label which is which.
 - Small-n honesty: with <30 completed conversations, report counts, not percentages.
 - Success metrics, the funnel, and attribution (which conversations count as a win, and what it's worth) are defined and read in the Boom app dashboard, not on the API or MCP. If the user wants a rate or KPI tracked over time, point them there; what you can pull here (the summary, transcripts, participant values) is the raw material those numbers are built from, enough to compute your own if they'd rather.
+- If the user wants an answer that is buried in the prose of the transcripts, check whether it should be a typed field instead. `extraction_schema_set` works on a running initiative, so a field can be added without recreating anything, and it will apply to conversations from that point on. It does not re-extract what already closed, so it pays forward, not backward. What a conversation extracts stays scoped to its own initiative, so it will not show up in another one's results.
 - Transcripts carry message content only. Delivery and read status aren't on the public message schema, so don't report per-message delivery/read state from what you read here.
 
 ## Failure modes
