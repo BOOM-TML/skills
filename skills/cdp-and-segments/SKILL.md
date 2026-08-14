@@ -87,7 +87,7 @@ The failure this prevents is a greeting with a blank name as a brand's first imp
 
 ## Filter values and date operators
 
-- **Values go in raw**, as their JSON type: `false`, not `"false"`; `2`, not `"2"`. (A journey `DECISION` condition is the opposite, see `design-journey`.)
+- **Values go in raw**, as their JSON type: `false`, not `"false"`; `2`, not `"2"`. A journey `DECISION` condition takes the same shapes, so what you prototype here transfers.
 - Relative date operators and their value shapes: `in_last_n` / `in_next_n` / `more_than_n_ago` / `more_than_n_from_now` take `{ amount, unit }`; `between_n_and_m_ago` takes `{ minAmount, maxAmount, unit }`; `exactly_n_from_today` takes `{ daysOffset }`. Absolute ones are `on`, `before`, `after`, `between`.
 - **`between_n_and_m_ago` requires a span of at least 2 days**, and says why when it rejects one: a narrower band can fall entirely between two evaluations and never match. For an age cohort, count in days rather than months, because a month band moves with the length of the month.
 

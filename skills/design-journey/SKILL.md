@@ -110,7 +110,7 @@ When the value is a URL you do not control the exact form of, put it in the **bo
 - Timeouts and durations use the `30m` / `24h` / `3d` format; DELAY `until_date` must be in the future; DELAY timezones must be valid IANA zones.
 - Foot-gun warnings: a `DISPATCH_EVENT` emitting the same event the ENTRY listens to (self-trigger loop), or an event that both enrolls and cancels the run.
 
-- A `cdp_predicate` condition's value has to match the shape its operator wants, and this **is** checked, both when you write the node and at publish. A relative date operator takes an object (`{"unit":"days","amount":7}`); a scalar comparison takes a string (`"true"`, `"2"`). An operator that does not apply to the attribute's type is rejected too. (Note the asymmetry with segment filters, where values go in raw. Same concept, different surface.)
+- A `cdp_predicate` condition's value has to match the shape its operator wants, and this **is** checked, both when you write the node and again at publish. A relative date operator takes an object (`{"unit":"days","amount":7}`), `between` takes `{from, to}`, a list operator takes an array, and a scalar comparison takes the value's own JSON type (`true`, `7`), the same as a segment filter. Strings still work for booleans and numbers, left over from the old editor, so a journey you read back may show `"7"`. An operator that does not apply to the attribute's type is rejected too. What is **not** checked is that `attr` names an attribute that exists, so a typo there still passes.
 
 Drafts can be incomplete; only **publish** requires a clean validation.
 
