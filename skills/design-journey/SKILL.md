@@ -36,7 +36,7 @@ Tool names follow `domain_action`; if a call fails with `tool_not_found`, list a
 | `ENTRY` | trigger | How people enroll | `triggerType: manual \| segment \| cdp_event`; `segmentId` / `eventName`; optional frequency cap `maxEnrollments` + `enrollmentWindow` | `SENT` |
 | `SEND_MESSAGE` | action | Send a WhatsApp template | `templateId` **and** `channelId` (both required to publish), `templateBindings` (see "Bind your variables") | `SENT` |
 | `WAIT_FOR_REPLY` | action | Passive wait for the first reply (no AI) | `maxTimeout` | `REPLIED`, `TIMEOUT` |
-| `MANAGE_CONVERSATION` | action | The AI-led conversation | `mode: AGENT \| ESCALATE`, optional `inactivityTimeout` (`1h`–`24h`) | `CLOSED`, `STALE`, + `INACTIVE` (only when `inactivityTimeout` is set) |
+| `MANAGE_CONVERSATION` | action | The AI-led conversation | `mode: AGENT \| ESCALATE`, optional `inactivityTimeout` (`1h`–`24h`; AGENT-mode only, and gated by the `journey-inactivity-timeout` flag — without it the node falls back to a single 7-day wait) | `CLOSED`, `STALE` — a configured `inactivityTimeout` *closes* the conversation, so it routes `CLOSED`; there is no separate inactivity handle |
 | `CONVERSATION_BLOCK` | action | **Legacy** combined wait + AI conversation | `mode`, `maxTimeout`, `goal` | `CLOSED`, `TIMEOUT`, `STALE` |
 | `DELAY` | logic | Wait | `mode: duration` (`2d`) \| `until_date` (ISO instant) \| `until_weekday` (weekdays + time window + IANA timezone) | `SENT` |
 | `DECISION` | logic | Two-way branch | `logic: AND \| OR` + conditions: person attribute predicate, event occurred, custom-object match, or a runtime value | `YES`, `NO` |
