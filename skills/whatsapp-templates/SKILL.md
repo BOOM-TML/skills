@@ -5,7 +5,11 @@ description: Use when the user needs to create, fix, or choose a WhatsApp messag
 
 # WhatsApp Templates
 
-Every WhatsApp conversation on Boom opens with a **template pre-approved by Meta** (~24–48h review). A rejected or mediocre opener stalls the whole initiative, so this skill covers both getting **approved** and getting **replies**.
+Every WhatsApp conversation on Boom opens with a **template pre-approved by Meta**. A rejected or mediocre opener stalls the whole initiative, so this skill covers both getting **approved** and getting **replies**.
+
+Review is usually fast. Text UTILITY templates come back APPROVED in minutes: across four production batches most were approved inside 15 minutes and nearly all inside an hour. Meta's stated window is 24 to 48 hours, so treat that as the outer limit rather than the expectation, and treat anything still PENDING after a day as worth a second look.
+
+**A template you have submitted cannot be edited or deleted.** There is no update or delete tool, and none is coming: a submitted template is a record at Meta. Every change of copy is a new template under a new name, and the old ones stay in the account's list forever. So close the copy with the user **before** you call `templates_create`, not after, and when orphans do pile up, tell the user to archive them in the Boom app so nobody on their team picks the wrong one later.
 
 ## Tools used
 
@@ -36,9 +40,11 @@ Placeholders are numbered `{{1}}`, `{{2}}`… and **every one needs an example v
 
 ## Meta's rejection catalog (all seen in production)
 
+Boom checks a few things before submitting (placeholders numbered from `{{1}}` with no gaps, an example value for every one, a button URL that resolves), but the rules below are Meta's and Boom does not pre-screen them. They come back as `rejectionReason` on `templates_get` / `templates_list`.
+
 | Rule | Real rejection it prevents |
 |---|---|
-| No variable at the **start or end** of the body | `Variables can't be at the start or end of the template` — open with a greeting, close with a question |
+| No variable at the **start or end** of the body | `Variables can't be at the start or end of the template` — open with a greeting, close the last sentence with a word, not a value. "Tu número de guía es {{2}}." ends in a period and passes; "Tu número de guía: {{2}}" does not |
 | Footers: no newlines, no emojis | `The message footer can't have any newlines or emojis` |
 | Button URLs must be full valid URIs | `buttons[0]['url'] is not a valid URI` — include `https://`, no bare domains |
 | One template per (name, language) | `There is already Spanish content for this template` — new content = new name |
@@ -69,8 +75,10 @@ An initiative with `maxAttempts: N` needs an **INITIAL_OUTREACH** template plus 
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `REJECTED` | See rejection catalog — read `rejectionReason` | Fix the specific violation; resubmit under a **new name** |
-| Stuck `PENDING` >48h | Meta review queue (MARKETING is slower) | Wait, or re-frame as UTILITY if honest |
+| `REJECTED` | See rejection catalog — read `rejectionReason` | Fix the specific violation; resubmit under a **new name**. The rejected one cannot be deleted and stays in the list |
+| Still `PENDING` after a day | Meta review queue (MARKETING is slower) | Text UTILITY usually clears in minutes, so a day is already long. Wait, or re-frame as UTILITY if honest |
+| A journey publishes, then every send fails | **Publishing does not check template approval.** The graph goes live referencing a PENDING or REJECTED template, and the send is what refuses | Check the status yourself before publishing. `journeys_validate` does not look at it either |
+| `templates_create` times out | The template may still have been created | Never blind-retry a write that timed out. `templates_list` first: a duplicate is immutable forever |
 | Template sends from the wrong number | `phoneNumbers[]` omitted at creation | Recreate with explicit numbers from `whatsapp_numbers_list` |
 | Journey publish blocked | Template not APPROVED yet, or not attached | Approve first; attach with `initiatives_templates_set` |
 | Variables render literally (`{{1}}`) | Binding missing in the journey's SEND_MESSAGE node | Set `templateBindings` on the node (via `journeys_update_node` or the builder) — bind every placeholder; see `design-journey` |
