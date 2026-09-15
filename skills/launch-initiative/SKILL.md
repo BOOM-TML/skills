@@ -84,13 +84,23 @@ Not a topic ("churn feedback"), not a question list — one understanding-goal.
 
 ## Writing the `context` (≤5000 chars Markdown) — the formula
 
-Production initiatives with the best interview quality all include these five blocks:
+Production initiatives with the best interview quality all include these six blocks:
 
 1. **Business flow** — how the product/process works, step by step, so the agent never guesses. Name internal projects, partners, plans.
 2. **What the participant already experienced** — quote verbatim any prior messages they got, the screen they abandoned, the plan they canceled. The agent can then reference reality: "el mensaje donde te compartimos el link…"
 3. **Who the participants are** — customers? churned? leads who never converted? their relationship to the brand ("no son clientes de Nexu, solo leads que iniciaron con otra financiera").
 4. **Brand presentation rules** — what name to present as (sub-brands per partner: "preséntate como KIA Trust, nunca como Nexu"), tone constraints, language/formality.
 5. **No-go topics** — words and topics to avoid ("no destaques la palabra 'rechazo'", "nada que deje mal a Inbursa"), plus what to do when asked something off-script.
+6. **How much to say per turn** — the five blocks above are the agent's *reference material*; this one is the only thing that stops it reading them aloud. One short message per turn, one question per turn and put it last, never restate what the opening template already said, and mark which blocks are for later ("the account portal is for someone who already subscribed — don't raise it yourself"). Include one worked example of a good turn: showing the target length lands far better than describing it.
+
+**A context that reads like documentation gets recited like documentation.** A
+well-grounded agent with no turn budget will cover every block you gave it, in one
+go. This is easy to wave through in review because nothing in the reply is *wrong*:
+the facts check out, the links work, the tone is right — it is simply all of it, at
+once, including the offer the template just made and the instructions for a state the
+customer is not in yet. Formatting rules ("don't paste a numbered list") do not fix
+it; they change how the answer looks, not how much it says. Budget the turn, and mark
+the blocks that are for later.
 
 Optionally: behavioral-science framing ("sé respetuoso y no invasivo al explorar el porqué de su inacción"). Files can be referenced with `[name](asset:<id>)` mentions if uploaded in the app.
 
