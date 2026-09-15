@@ -30,7 +30,15 @@ Every WhatsApp conversation on Boom opens with a **template pre-approved by Meta
 | `MEDIA` | `{ "body?": "...", "media": ["https://…"] }` |
 | `QUICK_REPLY` | `{ "body": "...", "actions": [{ "title": "Sí, cuéntame", "id": "yes" }] }` |
 | `CALL_TO_ACTION` | `{ "body": "...", "actions": [{ "type": "URL"\|"PHONE_NUMBER", "title": "...", "url"\|"phone": "..." }] }` |
-| `CARD` | `{ "headerType", "headerText"\|"mediaUrl", "body", "footer?", "actions?" }` |
+| `CARD` | `{ "headerType", "headerText"\|"mediaUrl", "body", "footer?", "actions?" }` — its actions need an explicit `type`, see below |
+
+**A `CARD`'s actions carry an explicit `type`; a `QUICK_REPLY`'s don't.** On a
+`QUICK_REPLY` template, `{ "title", "id" }` is the whole button. On a `CARD` the
+same object is refused with `Invalid option: expected one of
+"URL"|"PHONE_NUMBER"|"QUICK_REPLY"`, because a card can carry either kind of
+button and has to be told which — so write
+`{ "type": "QUICK_REPLY", "title": "Sí, cuéntame", "id": "yes" }`. The error names
+the enum but not the field, so it reads like a bad `title` or `id`.
 
 Placeholders are numbered `{{1}}`, `{{2}}`… and **every one needs an example value** in `variables`, e.g. `{"1": "Ana"}` — Meta reviews with the examples filled in.
 
