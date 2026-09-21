@@ -34,7 +34,9 @@ for (const folder of skillFolders) {
     if (description.length > 500) errors.push(`${folder}: description > 500 chars`);
   }
   if (!/##\s*Tools used/i.test(text)) errors.push(`${folder}: missing "Tools used" section`);
-  if (/\bengagements?\b/i.test(text)) errors.push(`${folder}: uses forbidden word "engagement" (say participant)`);
+  // "engagement" is banned as product language, but `engagement.<path>` is the real
+  // prefix of the run-data paths a binding or condition must use, so let that through.
+  if (/\bengagements?\b(?!\.[A-Za-z_*<])/i.test(text)) errors.push(`${folder}: uses forbidden word "engagement" (say participant; the data paths \`engagement.<key>\` are allowed)`);
   // relative links resolve
   for (const [, target] of text.matchAll(/\]\((\.\.?\/[^)#]+)\)/g)) {
     if (!existsSync(resolve(join(skillsDir, folder), target)))
