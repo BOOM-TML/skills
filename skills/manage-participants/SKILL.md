@@ -26,7 +26,7 @@ description: Use when the user wants to add people to an EXISTING Boom initiativ
 
 1. Confirm the target initiative (`initiatives_list` / user link).
 2. Shape rows as `{ "phoneNumber": "+5215512345678", "name": "...", "lastName": "...", ...attributes }` (on an email initiative, `"email": "ana@example.com"` in place of `phoneNumber`) — extra attributes become interview context the agent can use.
-3. Call `initiatives_participants_add`. Compare the accepted count to what you sent: DNC-suppressed people are skipped server-side. **Report the delta; never retry suppressed entries.**
+3. Call `initiatives_participants_add`. Compare the accepted count to what you sent: DNC-suppressed people (phones and email addresses alike) come back as `contact_suppressed`. **Report the delta; never retry suppressed entries.** A row without the channel's identifier comes back in `errors` as `missing_phone_number` / `missing_email`, and a malformed address as `invalid_email`. It isn't enrolled, but the rest of the batch still is, so fix and resend only those rows.
 4. This one needs org admin — on `error.code: "forbidden"`, tell the user their Boom account isn't an admin of the organization, so they need an admin to run it or to do it from the Boom app.
 
 ## Workflow: monitoring & stopping

@@ -72,7 +72,7 @@ There is no "send this email now" tool. An email goes out when a journey reaches
 
 Handles are easy to guess wrong. `DELAY`'s output is **`SENT`**, not `DONE`. Read `journeys_authoring_catalog` for every node's `outputHandles` rather than assuming.
 
-**Enrolling people.** The person needs an email on their CDP record. Add them with `initiatives_participants_add` using `email` in place of `phoneNumber` (see `manage-participants`). Another way to start runs is a journey with a `cdp_event` trigger: `cdp_people_upsert` the person with their email, then fire the event with `cdp_events_record` (the single-event call; the batch one doesn't enroll). **Test on one address you own before enrolling a list.**
+**Enrolling people.** `initiatives_launch` publishes an email initiative's journey, same as on WhatsApp. Then enroll with `initiatives_participants_add`, sending `email` for each person in place of `phoneNumber` (see `manage-participants`). Do Not Contact is enforced on email addresses too. To start runs on customer behavior instead of a list, give the journey a `cdp_event` trigger and fire it with `cdp_events_record` (the single-event call; the batch one doesn't enroll). **Test on one address you own before enrolling a list.**
 
 ## Troubleshooting
 

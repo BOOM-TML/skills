@@ -144,7 +144,7 @@ Pattern from winners: Q1 = the core "why" (DEEP), Q2 = reaction to the concrete 
 | Launch succeeds, then no message arrives | A round's template was still `PENDING` when that round fired | **Nothing checks template approval before sending.** `journeys_validate`, publish and launch all pass with unapproved templates; the failure only appears per-send, as free text on the step, with no error code. Confirm every round is `APPROVED` with `templates_list` before you enroll anyone |
 | `409 initiative_not_draft` on launch | Already launched, or cancelled/archived | Only a DRAFT launches |
 | `422 no_outreach_template` on launch | Round one has no approved, active WhatsApp template linked | Approve/attach one first, see `whatsapp-templates` |
-| `422 journey_not_ready` on launch | The journey behind it failed validation at publish | The response lists the issues; fix them with `design-journey`'s tools and launch again |
+| `422 journey_not_ready` on launch | The journey behind it failed validation at publish, or there is no journey at all (WhatsApp and email alike) | The response lists the issues; fix them with `design-journey`'s tools and launch again |
 | `422 initiative_not_ready` on launch | A required field is missing, or rewards aren't set up | The message names what's missing; check `initiatives_get` |
 | Template stuck in PENDING | Meta review (~24–48h) | Create templates first; check back with `templates_list` |
 | Participant `context` rejected | Keys don't match `contextSchema` | Align keys exactly (case-sensitive) |
