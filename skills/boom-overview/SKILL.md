@@ -48,7 +48,7 @@ Segment / CSV / API  ──►  Participants  ──►  Initiative  ──►  
 2. **(Optional) sync your data** — connect a database/Shopify so audiences stay fresh → `connect-your-data`
 3. **Define the audience** — query the CDP, build a segment → `cdp-and-segments`
 4. **Create the initiative** — objective, context, guiding questions → `launch-initiative`
-5. **Get the opener approved** — WhatsApp template → `whatsapp-templates`
+5. **Get the opener approved** — WhatsApp template → `whatsapp-templates` (or an email template, no approval needed → `email-templates`)
 6. **Shape the workflow** — follow-up rounds, branching, timing → `design-journey`
 7. **Enroll & launch** — add participants, start outreach → `launch-initiative` / `manage-participants`
 8. **Read the results** — summaries, transcripts, themes → `analyze-results`
@@ -67,6 +67,7 @@ Inbound has no authoring skill because there's nothing to author: when a custome
 | Find people, build or refresh an audience | `cdp-and-segments` |
 | Create & launch a new initiative, whatever the job | `launch-initiative` |
 | Write or fix a WhatsApp opening message | `whatsapp-templates` |
+| Build, publish or send an email template | `email-templates` |
 | Design follow-up rounds, branching, timing | `design-journey` |
 | Add/stop/inspect people in a running initiative | `manage-participants` |
 | Summarize what an initiative learned | `analyze-results` |

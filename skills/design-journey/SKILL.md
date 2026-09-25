@@ -17,6 +17,7 @@ Your job with this skill: *build or debug the graph precisely*, then either publ
 | `journeys_authoring_catalog` | The machine-readable node-kind catalog (kinds, inputs, output signals) — read this before building | read |
 | `journeys_condition_catalog` / `journeys_event_catalog` | Valid DECISION predicate terms and dispatchable/reserved event names | read |
 | `journeys_message_channels` / `journeys_message_templates` | Sending channel ids and approved template ids for SEND_MESSAGE | read |
+| `journeys_email_templates` | What a SEND_EMAIL node needs: the PUBLISHED email templates, the org's email readiness, and the From / Reply-To senders (email has no `channelId`) | read |
 | `journeys_message_variables` | The exact variable paths a SEND_MESSAGE template binding can reference for a journey (`customer.*`, `person.<key>`, and run-produced values) — read this before binding placeholders | read |
 | `journeys_create_draft` / `journeys_create_draft_from_published` | Start a new editable draft (blank or copied from the live version) | write |
 | `journeys_add_node` / `journeys_update_node` / `journeys_delete_node` | Add, edit, or remove a node | write |
@@ -35,6 +36,7 @@ Tool names follow `domain_action`; if a call fails with `tool_not_found`, list a
 |---|---|---|---|---|
 | `ENTRY` | trigger | How people enroll | `triggerType: manual \| segment \| cdp_event`; `segmentId` / `eventName`; optional frequency cap `maxEnrollments` + `enrollmentWindow` | `SENT` |
 | `SEND_MESSAGE` | action | Send a WhatsApp template | `templateId` **and** `channelId` (both required to publish), `templateBindings` (see "Bind your variables") | `SENT` |
+| `SEND_EMAIL` | action | Send a PUBLISHED email template (outbound only) | `templateId` (required to publish), optional `bindings`, `fromSenderIdOverride` / `replyToSenderIdOverride` | `SENT` |
 | `WAIT_FOR_REPLY` | action | Passive wait for the first reply (no AI) | `maxTimeout` | `REPLIED`, `TIMEOUT` |
 | `MANAGE_CONVERSATION` | action | The AI-led conversation | `mode: AGENT \| ESCALATE`, optional `inactivityTimeout` (`1h`–`24h`; AGENT-mode only, and gated by the `journey-inactivity-timeout` flag — without it the node falls back to a single 7-day wait) | `CLOSED`, `STALE` — a configured `inactivityTimeout` *closes* the conversation, so it routes `CLOSED`; there is no separate inactivity handle |
 | `CONVERSATION_BLOCK` | action | **Legacy** combined wait + AI conversation | `mode`, `maxTimeout`, `goal` | `CLOSED`, `TIMEOUT`, `STALE` |
@@ -47,19 +49,19 @@ Tool names follow `domain_action`; if a call fails with `tool_not_found`, list a
 
 For new journeys, prefer **`WAIT_FOR_REPLY` + `MANAGE_CONVERSATION`** over the legacy `CONVERSATION_BLOCK` — the split gives you separate handles for "never replied" (`TIMEOUT`) vs "replied then the AI closed the conversation" (`CLOSED`), which most follow-up logic needs.
 
-The visual builder also has an email-send node, outbound only with no reply of its own, that isn't in this table because it isn't in `journeys_authoring_catalog`: `journeys_add_node` can't create one. Build it in the app. There's also no email-template tool; `templates_create` / `templates_list` are WhatsApp only. A journey built with one in the app still runs and reads back fine here, and the one rule to know if you touch it: only a delay, an exit, or another non-conversational node may follow it, never a reply-driven one.
+**`SEND_EMAIL` has no reply of its own**, so its successor may not be `WAIT_FOR_REPLY`, `MANAGE_CONVERSATION` or `CONVERSATION_BLOCK` (`SEND_EMAIL_INVALID_SUCCESSOR`). Follow it with a `DELAY`, an `EXIT`, or another send/logic node. Publish refuses it unless its template is PUBLISHED and a From address resolves: `readiness.verified` and `readiness.hasSender` in `journeys_email_templates`, or a `fromSenderIdOverride` that is `usableAsFrom`. Templates are authored with `email_templates_create` / `email_templates_update`, not the WhatsApp `templates_*` tools; see [`email-templates`](../email-templates/SKILL.md).
 
 Routing rule: an edge fires when its `sourceHandle` equals the signal the node emitted. **Every signal a node can emit must have exactly one outgoing edge** — this is the #1 publish error.
 
 ## Authoring workflow (MCP)
 
-1. **Learn the graph.** Call `journeys_authoring_catalog` for the node kinds and their inputs; `journeys_message_channels` / `journeys_message_templates` for the ids a SEND_MESSAGE needs; `journeys_message_variables` for the paths a template binding can reference; `journeys_condition_catalog` for DECISION predicate terms; `journeys_event_catalog` for valid event names.
+1. **Learn the graph.** Call `journeys_authoring_catalog` for the node kinds and their inputs; `journeys_message_channels` / `journeys_message_templates` for the ids a SEND_MESSAGE needs; `journeys_email_templates` for a SEND_EMAIL's; `journeys_message_variables` for the paths a template binding can reference; `journeys_condition_catalog` for DECISION predicate terms; `journeys_event_catalog` for valid event names.
 2. **Open a draft.** `journeys_create_draft` for a blank one, or `journeys_create_draft_from_published` to iterate on the live version. Only a DRAFT is editable; a PUBLISHED version is frozen.
 3. **Build the nodes.** `journeys_add_node` per node, `journeys_connect_nodes` per edge (name the `sourceHandle` — the signal the edge routes on). Positions are optional; the server auto-lays-out the graph.
 4. **Set the trigger** with `journeys_set_trigger`. `manual` and `cdp_event` work fully from here. **`segment` does not**: it validates `segmentId` as the segment's internal id, and the public segment surface (`cdp-and-segments`) only exposes `slug`, so passing one fails `not_found`. Wire a segment trigger in the Boom app instead, everything else about the journey can still be built and published from here.
 5. **Bind template variables** on every SEND_MESSAGE (see below), the most common thing to forget.
 6. **Validate** with `journeys_validate` and fix every `error` (warnings are advisory).
-7. **Publish** with `journeys_publish` once validation is clean. **Publishing starts real outreach, get explicit confirmation from the user first.** Publishing a new version supersedes the previous one; versions are immutable. This works on any journey, whatever its steps send, so you can take a whole flow live from here. One shortcut: if the initiative is set to the WhatsApp channel, `initiatives_launch` (see `launch-initiative`) publishes the current draft for you, so you can skip this call in that case.
+7. **Publish** with `journeys_publish` once validation is clean. **Publishing starts real outreach, get explicit confirmation from the user first.** Publishing a new version supersedes the previous one; versions are immutable. This works on any journey, whatever its steps send, so you can take a whole flow live from here. One shortcut: `initiatives_launch` (see `launch-initiative`) publishes the current draft for you, on a WhatsApp or an email initiative, so you can skip this call in that case.
 
 You can also assemble the whole definition and send it in one `journeys_update_draft` call instead of node-by-node — useful when you already have the full graph designed.
 
@@ -176,4 +178,4 @@ Before publishing (or handing over a spec), verify:
 - **"Some people got nothing"** → a CASE value with no matching branch falling to an unwired default, or Do Not Contact suppression (expected, server-side).
 - **"Person enrolled twice"** → segment-triggered ENTRY without `maxEnrollments` / `enrollmentWindow`.
 
-See [`CONTEXT.md`](../../CONTEXT.md) for the domain model. Template authoring: [`whatsapp-templates`](../whatsapp-templates/SKILL.md). Segments: [`cdp-and-segments`](../cdp-and-segments/SKILL.md).
+See [`CONTEXT.md`](../../CONTEXT.md) for the domain model. Template authoring: [`whatsapp-templates`](../whatsapp-templates/SKILL.md), [`email-templates`](../email-templates/SKILL.md). Segments: [`cdp-and-segments`](../cdp-and-segments/SKILL.md).

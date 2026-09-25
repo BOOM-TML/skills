@@ -91,6 +91,7 @@ Either way, Claude selects the right skill from its `description` — typing the
 | [`cdp-and-segments`](skills/cdp-and-segments/SKILL.md) | Query Boom's CDP and build segments to target |
 | [`launch-initiative`](skills/launch-initiative/SKILL.md) | Create and launch any initiative end-to-end, with the context-authoring formula from Boom's best performers |
 | [`whatsapp-templates`](skills/whatsapp-templates/SKILL.md) | Write WhatsApp openers that pass Meta review and earn replies |
+| [`email-templates`](skills/email-templates/SKILL.md) | Build, publish and send email templates (blocks or HTML) from a journey's SEND_EMAIL step |
 | [`design-journey`](skills/design-journey/SKILL.md) | Design or debug the workflow graph behind an initiative (follow-up rounds, branching, timing) |
 | [`manage-participants`](skills/manage-participants/SKILL.md) | Add, monitor, and stop participants in an initiative |
 | [`analyze-results`](skills/analyze-results/SKILL.md) | Turn a running initiative's extracted data and transcripts into insight |
