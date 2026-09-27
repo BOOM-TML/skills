@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `design-journey`: document the `goal` input on `MANAGE_CONVERSATION` (per-step agent instructions on top of the initiative objective, AGENT mode only, reaches new runs only), how to set and read it over MCP, and why it is not a second objective. Also corrects the `inactivityTimeout` range: any value up to `24h`, not `1h`–`24h`.
+
 - **Email over MCP.** Add `email-templates`: `email_templates_list/get/create/update`, a block `document` vs hand-written `html` (exactly one, rendered and sanitized server-side, `removed` lists what was stripped), unknown fields rejected, DRAFT → PUBLISHED via `status`, `confirm: true` to change a live template, the one-way blocks → HTML conversion, the top-level-only footer, and sending through a journey's `SEND_EMAIL` node. `design-journey` drops its stale "email isn't authorable over MCP" note: `SEND_EMAIL` is in the node table with its successor rule and publish checks, and `journeys_email_templates` is in the tools. `launch-initiative` and `manage-participants` document that launch publishes email journeys too and that email participants enroll with `email`.
 
 - **Install is one command, and the skills now actually auto-update.** Three changes that only work together:

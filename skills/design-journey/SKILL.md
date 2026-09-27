@@ -38,7 +38,7 @@ Tool names follow `domain_action`; if a call fails with `tool_not_found`, list a
 | `SEND_MESSAGE` | action | Send a WhatsApp template | `templateId` **and** `channelId` (both required to publish), `templateBindings` (see "Bind your variables") | `SENT` |
 | `SEND_EMAIL` | action | Send a PUBLISHED email template (outbound only) | `templateId` (required to publish), optional `bindings`, `fromSenderIdOverride` / `replyToSenderIdOverride` | `SENT` |
 | `WAIT_FOR_REPLY` | action | Passive wait for the first reply (no AI) | `maxTimeout` | `REPLIED`, `TIMEOUT` |
-| `MANAGE_CONVERSATION` | action | The AI-led conversation | `mode: AGENT \| ESCALATE`, optional `inactivityTimeout` (`1h`–`24h`; AGENT-mode only, and gated by the `journey-inactivity-timeout` flag — without it the node falls back to a single 7-day wait) | `CLOSED`, `STALE` — a configured `inactivityTimeout` *closes* the conversation, so it routes `CLOSED`; there is no separate inactivity handle |
+| `MANAGE_CONVERSATION` | action | The AI-led conversation | `mode: AGENT \| ESCALATE`, optional `goal` (instructions for this step only; AGENT-mode only, see "Step goals"), optional `inactivityTimeout` (any value up to `24h`, under `30m` allowed but flagged; AGENT-mode only, and gated by the `journey-inactivity-timeout` flag — without it the node falls back to a single 7-day wait) | `CLOSED`, `STALE` — a configured `inactivityTimeout` *closes* the conversation, so it routes `CLOSED`; there is no separate inactivity handle |
 | `CONVERSATION_BLOCK` | action | **Legacy** combined wait + AI conversation | `mode`, `maxTimeout`, `goal` | `CLOSED`, `TIMEOUT`, `STALE` |
 | `DELAY` | logic | Wait | `mode: duration` (`2d`) \| `until_date` (ISO instant) \| `until_weekday` (weekdays + time window + IANA timezone) | `SENT` |
 | `DECISION` | logic | Two-way branch | `logic: AND \| OR` + conditions: person attribute predicate, event occurred, custom-object match, or a runtime value | `YES`, `NO` |
@@ -52,6 +52,17 @@ For new journeys, prefer **`WAIT_FOR_REPLY` + `MANAGE_CONVERSATION`** over the l
 **`SEND_EMAIL` has no reply of its own**, so its successor may not be `WAIT_FOR_REPLY`, `MANAGE_CONVERSATION` or `CONVERSATION_BLOCK` (`SEND_EMAIL_INVALID_SUCCESSOR`). Follow it with a `DELAY`, an `EXIT`, or another send/logic node. Publish refuses it unless its template is PUBLISHED and a From address resolves: `readiness.verified` and `readiness.hasSender` in `journeys_email_templates`, or a `fromSenderIdOverride` that is `usableAsFrom`. Templates are authored with `email_templates_create` / `email_templates_update`, not the WhatsApp `templates_*` tools; see [`email-templates`](../email-templates/SKILL.md).
 
 Routing rule: an edge fires when its `sourceHandle` equals the signal the node emitted. **Every signal a node can emit must have exactly one outgoing edge** — this is the #1 publish error.
+
+## Step goals
+
+A `MANAGE_CONVERSATION` in `mode: AGENT` can carry a `goal`: instructions the agent follows **during this step only**, on top of the initiative's objective. The initiative objective says what the whole conversation is for; the step goal says what to do first at this point in the journey.
+
+- **Write it as one concrete instruction.** Good: `"Confirma la dirección de entrega antes de responder cualquier otra cosa."` Bad: restating the objective, or a paragraph of tone rules (those belong on the initiative).
+- **It narrows the objective, it never adds a second one.** If the step needs a different job, that is a second initiative (see "One objective per initiative").
+- **Set it** with `journeys_add_node` (in the node's `inputs`) or `journeys_update_node` with `inputs: { "goal": "..." }`, which merges into the existing config. **Read it back** with `journeys_get_definition`. Clear it by sending an empty string.
+- **ESCALATE ignores it**: a human handoff has no agent to instruct. The stored value is kept, so switching back to AGENT restores it.
+- **It reaches new runs only.** Runs are pinned to the version they enrolled on, so editing a goal means `journeys_create_draft_from_published`, edit, publish, and only people who enroll after that get the new instructions.
+- Different steps can carry different goals: a first `MANAGE_CONVERSATION` that collects an address and a later one, after a `DELAY`, that confirms delivery.
 
 ## Authoring workflow (MCP)
 
@@ -158,6 +169,8 @@ An `ENTRY` can also be `cdp_event`-triggered, which lets your own system decide 
 
 An initiative's conversation is run by the AI toward the **single objective** you set on the initiative. Journeys are great at *routing* (branch, wait, call an API, hand off), but a journey should not try to make one conversation accomplish two different goals — the agent handles a focused objective far better than a split one. When a flow really has two jobs (e.g. "collect the documents" and then, later, "resolve what was wrong with them"), model them as **two initiatives chained by an event or an `EXIT.nextInitiativeId`**, not one journey with a mode switch.
 
+A step `goal` on `MANAGE_CONVERSATION` is not a way around this. It focuses one step *within* the objective ("ask for the address first"); it does not give the conversation a second job.
+
 To keep a person out of two conflicting initiatives at once, two mechanisms help: a `DECISION` guard right before an action (re-check the person's current status; exit if they've moved on), and journey-level `cancelOnEvents` (cancel an in-flight run when a status event arrives). Pick whichever fits — the guard is explicit and easy to reason about.
 
 ## Design review checklist
@@ -168,7 +181,8 @@ Before publishing (or handing over a spec), verify:
 3. Follow-up templates exist for every round (round 2..N need their own approved template).
 4. DELAY windows respect the audience's waking hours, and the `timezone` is right — it falls back to the **organization's** timezone, which is not always the audience's. Set it explicitly when they differ.
 5. Segment-triggered ENTRY has a frequency cap unless the user explicitly wants unlimited re-enrollment.
-6. EXIT `outcome` labels are meaningful (`recovered`, `no_response`) — they show up in analysis.
+6. Each `MANAGE_CONVERSATION` `goal`, if set, is one step-specific instruction that fits inside the initiative objective, not a second objective.
+7. EXIT `outcome` labels are meaningful (`recovered`, `no_response`) — they show up in analysis.
 
 ## Debugging a live journey
 
