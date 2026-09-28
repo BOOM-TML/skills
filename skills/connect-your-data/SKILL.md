@@ -9,7 +9,7 @@ Boom's CDP (persons, custom objects, events) is what segments filter over — fr
 
 | Route | When | Where |
 |---|---|---|
-| **Database / Shopify / Skio sync** | Data lives in your systems and changes continuously | Boom app → Settings → Data Sources (UI-only; **not on the MCP**) |
+| **Database / Shopify / Skio sync** | Data lives in your systems and changes continuously | Boom app → sidebar **Integrations** → **Directory** tab (UI-only; **not on the MCP**) |
 | **API / MCP writes** | You push from your own backend or an agent | `cdp_people_*`, `cdp_custom_objects_*`, `cdp_events_*` tools |
 | **CSV upload** | One-shot list for a single initiative | Boom app, or `initiatives_participants_add` with per-person `context` |
 
@@ -51,9 +51,11 @@ Tighter is better: grant per-table if the DB holds data Boom doesn't need.
 - **DIRECT** — the DB has a public endpoint (managed Postgres/MySQL with SSL). Form needs host, port, database, user, password; SSL is required. Private/loopback IPs are blocked by design (SSRF protection) — a "host not allowed" error on a private IP means you need the tunnel.
 - **SSH_TUNNEL** — the DB lives in a VPC and is only reachable through a bastion. Extra fields: bastion host/port/username + a **dedicated SSH private key** (generate fresh: `ssh-keygen -t ed25519 -f boom-bastion -C boom-sync`; give Boom the private key, put the `.pub` on the bastion; least-privilege: a user that can only port-forward). On first connect Boom shows the bastion's host-key fingerprint — **pin it** so a swapped bastion is refused later.
 
-Click **Test connection** — it validates reachability, TLS, and credentials, and reports normalized errors (auth vs network vs TLS).
+Click **Save** — it tests the connection as it saves (reachability, TLS, credentials) and lands on the connection page with **Active** or **Error** plus a normalized message (auth vs network vs TLS). Fix with **Edit**, retest with **Test connection** there. There is no SSL setting: every connection uses TLS `Require`.
 
 ## Step 3 — the sync mapping (the technical part)
+
+Saving a connection does not create its sync: Boom switches syncing on for it (ask Boom if nothing shows under **Integrations → Syncs**). Then open the sync, **+ Add data**, and walk the four steps: **What it becomes** (People / Objects / Link) → **Choose a table** → **Query & mapping** (**Run preview**, **Create sync**) → **Preview & go live** (**Go live**; **Pause** stops it).
 
 Each synced resource is a SQL query over the customer's schema honoring this contract:
 
@@ -84,7 +86,7 @@ Relationships (e.g. order↔product) add `left_external_id` / `right_external_id
 
 ## Shopify / Skio
 
-OAuth (Shopify) or API-key (Skio) connections in the same Data Sources UI — no SQL contract; customers, orders, and subscriptions map automatically. Use these over a DB connection when the store *is* the system of record.
+**Skio**: **Integrations → Directory → Skio** (Shopify domain + Skio API key → **Connect Skio**). **Shopify** is not in the Directory: Boom sends the store an install link. Neither needs a SQL contract; customers, orders, and subscriptions map automatically. Use these over a DB connection when the store *is* the system of record.
 
 ## Verify the sync
 
