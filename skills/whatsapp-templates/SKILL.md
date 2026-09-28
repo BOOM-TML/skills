@@ -54,6 +54,8 @@ Placeholders are numbered `{{1}}`, `{{2}}`… and **every one needs an example v
 
 ## UTILITY vs MARKETING — choose deliberately
 
+The Boom app's template form (**Settings → Templates → New template**) has no category control: every template made there is submitted as **UTILITY**. For a MARKETING (or AUTHENTICATION) template, use `templates_create` with `category` set.
+
 - **UTILITY**: relates to an existing relationship/transaction — research follow-up on *their* account, order, or experience qualifies when framed that way ("en seguimiento a la solicitud que iniciaste…"). Approves fast and reliably (the bulk of production approvals).
 - **MARKETING**: promotional or acquisition tone. Higher scrutiny, slower approval, higher per-message price — production shows a large batch of MARKETING templates languishing in review while UTILITY sails through.
 - Never miscategorize to save money: Meta reclassifies and can reject. If the message references the participant's own prior action/relationship, UTILITY is honest and optimal.
