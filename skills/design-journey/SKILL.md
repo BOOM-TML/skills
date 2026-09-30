@@ -26,7 +26,7 @@ Your job with this skill: *build or debug the graph precisely*, then either publ
 | `journeys_update_draft` | Replace the whole draft definition at once | write |
 | `journeys_validate` | Check a draft against the publish rules without going live | read |
 | `journeys_publish` | Publish the draft — **this goes live to real customers**; confirm first | write |
-| `drafts_list` / `drafts_decide` | Review sends held for approval (`delivery: "draft"`) and approve or reject them. **Approving sends real messages**; see "Hold sends for approval" | read / write |
+| `drafts_list` / `drafts_get` / `drafts_count` / `drafts_decide` | Review sends held for approval (`delivery: "draft"`), size a bulk decide, and approve or reject them. **Approving sends real messages**; see "Hold sends for approval" | read / write |
 | `initiatives_get` | The initiative the journey belongs to | read |
 
 Tool names follow `domain_action`; if a call fails with `tool_not_found`, list available tools and match by that pattern.
@@ -127,9 +127,9 @@ A `SEND_MESSAGE` or `SEND_EMAIL` node with `delivery: "draft"` renders the send 
 - While a draft waits, the person keeps their one active run in this journey, so enrolling them again returns `ACTIVE_RUN_EXISTS` (except on a parallel-runs journey).
 - The run-ended webhook reports a rejected run as `reason: completed`. Read the step's `emittedSignal` to tell them apart.
 
-**Review them** on the initiative's **Drafts** tab in the Boom app, or over MCP: `drafts_list` returns pending drafts (filter by `initiativeId`, `workflowId`, `nodeId`, `channel`, `status`) with a `preview` of what each person will receive; `drafts_decide` takes `ids`, or a `filter` plus `asOf` (the time you listed at), and `decision: "approve" | "reject"` with an optional `reason`. Reviewing needs an org admin or member.
+**Review them** on the initiative's **Drafts** tab in the Boom app, or over MCP: `drafts_list` returns pending drafts (filter by `initiativeId`, `workflowId`, `nodeId`, `channel`, `status`) with a `preview` of what each person will receive, plus `asOf` (the server time of the read). `drafts_get` returns one draft by id, including who decided it and why. `drafts_count` counts the pending drafts a filter matches; pass the list's `asOf` as `createdTo`. `drafts_decide` takes `ids`, or a `filter` plus `asOf` (the value `drafts_list` returned, never your own clock) plus `expectedCount` (the `drafts_count` result), and `decision: "approve" | "reject"` with an optional `reason`. If the matching set changed since you counted, a filter decide is refused with `draft_count_changed` and nothing is decided: count again and re-confirm with the user. Reviewing needs an org admin or member.
 
-> ⚠️ **Approving sends real messages to real customers.** Before `drafts_decide` with `approve`, show the user the drafts' content (from `drafts_list`) and how many will go out, and get an explicit yes. Never approve on your own judgement, and never approve by filter without telling them the count.
+> ⚠️ **Approving sends real messages to real customers.** Before `drafts_decide` with `approve`, show the user the drafts' content (from `drafts_list`) and how many will go out (`drafts_count`), and get an explicit yes. Never approve on your own judgement, and never approve by filter without telling them the count.
 
 **If `delivery` or the drafts tools are missing** from your tool list, your MCP client has stale tool schemas from before the feature shipped. Reconnect with `/mcp`. The server accepts `delivery` even when your schema doesn't show it, so if you send it anyway, read the node back with `journeys_get_definition` to confirm it stuck.
 
