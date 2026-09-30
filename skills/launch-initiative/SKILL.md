@@ -19,7 +19,7 @@ An initiative is one mission: an audience, a goal, and the flow that carries it 
 | `extraction_schema_get` / `extraction_schema_set` | Read/declare the typed fields to pull from every conversation, set before launch | read / write |
 | `initiatives_participants_add` | Enroll people | **admin** |
 | `initiatives_launch` | Start outreach | **admin** |
-| `drafts_list` / `drafts_decide` | Review and approve sends held as drafts (optional step 9) | read / write |
+| `drafts_list` / `drafts_count` / `drafts_decide` | Review, count and approve sends held as drafts (optional step 9) | read / write |
 
 > Tool names may drift while Boom's MCP is in beta. On `tool_not_found`, list tools and match the `domain_action` pattern.
 
