@@ -26,6 +26,7 @@ Your job with this skill: *build or debug the graph precisely*, then either publ
 | `journeys_update_draft` | Replace the whole draft definition at once | write |
 | `journeys_validate` | Check a draft against the publish rules without going live | read |
 | `journeys_publish` | Publish the draft — **this goes live to real customers**; confirm first | write |
+| `drafts_list` / `drafts_decide` | Review sends held for approval (`delivery: "draft"`) and approve or reject them. **Approving sends real messages**; see "Hold sends for approval" | read / write |
 | `initiatives_get` | The initiative the journey belongs to | read |
 
 Tool names follow `domain_action`; if a call fails with `tool_not_found`, list available tools and match by that pattern.
@@ -35,8 +36,8 @@ Tool names follow `domain_action`; if a call fails with `tool_not_found`, list a
 | Kind | Group | Purpose | Key inputs | Emits |
 |---|---|---|---|---|
 | `ENTRY` | trigger | How people enroll | `triggerType: manual \| segment \| cdp_event`; `segmentId` / `eventName`; optional frequency cap `maxEnrollments` + `enrollmentWindow` | `SENT` |
-| `SEND_MESSAGE` | action | Send a WhatsApp template | `templateId` **and** `channelId` (both required to publish), `templateBindings` (see "Bind your variables") | `SENT` |
-| `SEND_EMAIL` | action | Send a PUBLISHED email template (outbound only) | `templateId` (required to publish), optional `bindings`, `fromSenderIdOverride` / `replyToSenderIdOverride` | `SENT` |
+| `SEND_MESSAGE` | action | Send a WhatsApp template | `templateId` **and** `channelId` (both required to publish), `templateBindings` (see "Bind your variables"), optional `delivery: immediate \| draft` (see "Hold sends for approval") | `SENT`; `SKIPPED` (optional: Smart Sending's cap refused the send); `REJECTED` (only with `delivery: "draft"`, optional) |
+| `SEND_EMAIL` | action | Send a PUBLISHED email template (outbound only) | `templateId` (required to publish), optional `bindings`, `fromSenderIdOverride` / `replyToSenderIdOverride`, optional `delivery: immediate \| draft` | `SENT`; `SKIPPED` (optional: Smart Sending's cap); `REJECTED` (only with `delivery: "draft"`, optional) |
 | `WAIT_FOR_REPLY` | action | Passive wait for the first reply (no AI) | `maxTimeout` | `REPLIED`, `TIMEOUT` |
 | `MANAGE_CONVERSATION` | action | The AI-led conversation | `mode: AGENT \| ESCALATE`, optional `goal` (instructions for this step only; AGENT-mode only, see "Step goals"), optional `inactivityTimeout` (any value up to `24h`, under `30m` allowed but flagged; AGENT-mode only, and gated by the `journey-inactivity-timeout` flag — without it the node falls back to a single 7-day wait) | `CLOSED`, `STALE` — a configured `inactivityTimeout` *closes* the conversation, so it routes `CLOSED`; there is no separate inactivity handle |
 | `CONVERSATION_BLOCK` | action | **Legacy** combined wait + AI conversation | `mode`, `maxTimeout`, `goal` | `CLOSED`, `TIMEOUT`, `STALE` |
@@ -51,7 +52,7 @@ For new journeys, prefer **`WAIT_FOR_REPLY` + `MANAGE_CONVERSATION`** over the l
 
 **`SEND_EMAIL` has no reply of its own**, so its successor may not be `WAIT_FOR_REPLY`, `MANAGE_CONVERSATION` or `CONVERSATION_BLOCK` (`SEND_EMAIL_INVALID_SUCCESSOR`). Follow it with a `DELAY`, an `EXIT`, or another send/logic node. Publish refuses it unless its template is PUBLISHED and a From address resolves: `readiness.verified` and `readiness.hasSender` in `journeys_email_templates`, or a `fromSenderIdOverride` that is `usableAsFrom`. Templates are authored with `email_templates_create` / `email_templates_update`, not the WhatsApp `templates_*` tools; see [`email-templates`](../email-templates/SKILL.md).
 
-Routing rule: an edge fires when its `sourceHandle` equals the signal the node emitted. **Every signal a node can emit must have exactly one outgoing edge** — this is the #1 publish error.
+Routing rule: an edge fires when its `sourceHandle` equals the signal the node emitted. **Every required signal must have exactly one outgoing edge**, which is the #1 publish error. Two handles are optional: `SKIPPED` and `REJECTED` on a send node. Left unwired, the run ends quietly there.
 
 ## Step goals
 
@@ -97,12 +98,40 @@ So a binding is **not** always `person.*` — built-in fields are `customer.*`, 
 `journeys_validate` checks dozens of rules; the ones that trip people up most:
 
 - Exactly **one ENTRY**, at least **one EXIT**; unique node ids; every edge references existing nodes; every node named.
-- One out-edge per `(node, signal)` — a handle may wire to **at most one** node (no fan-out), and no signal may be left unwired. `WAIT_FOR_REPLY` needs both `REPLIED` and `TIMEOUT`; `MANAGE_CONVERSATION` needs `CLOSED`; `DECISION` needs both `YES` and `NO`; `CASE` needs every branch **plus** `case:default`; `HTTP_REQUEST` needs both `SUCCESS` and `FAILED`.
+- One out-edge per `(node, signal)` — a handle may wire to **at most one** node (no fan-out), and no required signal may be left unwired (`SKIPPED` and `REJECTED` on a send node are the optional ones). `WAIT_FOR_REPLY` needs both `REPLIED` and `TIMEOUT`; `MANAGE_CONVERSATION` needs `CLOSED`; `DECISION` needs both `YES` and `NO`; `CASE` needs every branch **plus** `case:default`; `HTTP_REQUEST` needs both `SUCCESS` and `FAILED`.
 - `SEND_MESSAGE`: `templateId` and `channelId` both set — there is no silent fallback number.
 - Timeouts and durations use the `30m` / `24h` / `3d` format; DELAY `until_date` must be in the future; DELAY timezones must be valid IANA zones.
 - Foot-gun warnings: a `DISPATCH_EVENT` emitting the same event the ENTRY listens to (self-trigger loop), or an event that both enrolls and cancels the run.
 
 Drafts can be incomplete; only **publish** requires a clean validation.
+
+## Hold sends for approval (drafts)
+
+A `SEND_MESSAGE` or `SEND_EMAIL` node with `delivery: "draft"` renders the send exactly as it would go out, stores it as a draft, and parks the run until a person approves or rejects it. In the builder this is the node's **Delivery** section, **Draft for approval**.
+
+**Suggest it** when the user wants to see real messages before they go out: a first launch to a new audience, a personalized email they want to proofread per person, or a regulated or high-stakes send. Don't suggest it for sends that must go out on time, or for large always-on flows where nobody will be reviewing.
+
+**Set it** with `journeys_add_node` or `journeys_update_node` with `inputs: { "delivery": "draft" }`. Omit it (or send `"immediate"`) for a normal send. Runs are pinned to the version they enrolled on, so this reaches new runs only after you publish.
+
+**What happens next:**
+- **Approve** sends the stored content, exactly as drafted, and the run continues on `SENT`. If Smart Sending's cap refuses the approved send, it routes `SKIPPED`.
+- **Reject** sends nothing and emits `REJECTED`. Wire it if the flow should do something else (a different message, an `EXIT` with an outcome label like `rejected`). Left unwired, the run ends quietly.
+- Content is frozen when the draft is created. If the template changes afterwards, the draft still carries the old content (the Drafts tab warns "Template edited since drafted").
+- Do Not Contact, the template's status, the sender and a stopped journey are checked again when the draft is approved. Stopping the journey cancels its waiting drafts.
+- Drafts don't expire. A run waits until someone decides.
+
+**Limits:**
+- WhatsApp only in template mode. A `mode: "free_text"` send can't be drafted, and neither can SMS, Instagram or Messenger.
+- Not on a Transactional initiative's journey (`transactional_draft_delivery`): a notification has to go out when its event fires.
+- On a parallel-runs journey, a drafted WhatsApp send can't keep the legacy business-hours gate (`sendImmediately: false`); publish refuses any windowed send there (`PARALLEL_RUNS_WINDOWED_SEND`). Use a preceding `DELAY` for timing.
+- While a draft waits, the person keeps their one active run in this journey, so enrolling them again returns `ACTIVE_RUN_EXISTS` (except on a parallel-runs journey).
+- The run-ended webhook reports a rejected run as `reason: completed`. Read the step's `emittedSignal` to tell them apart.
+
+**Review them** on the initiative's **Drafts** tab in the Boom app, or over MCP: `drafts_list` returns pending drafts (filter by `initiativeId`, `workflowId`, `nodeId`, `channel`, `status`) with a `preview` of what each person will receive; `drafts_decide` takes `ids`, or a `filter` plus `asOf` (the time you listed at), and `decision: "approve" | "reject"` with an optional `reason`. Reviewing needs an org admin or member.
+
+> ⚠️ **Approving sends real messages to real customers.** Before `drafts_decide` with `approve`, show the user the drafts' content (from `drafts_list`) and how many will go out, and get an explicit yes. Never approve on your own judgement, and never approve by filter without telling them the count.
+
+**If `delivery` or the drafts tools are missing** from your tool list, your MCP client has stale tool schemas from before the feature shipped. Reconnect with `/mcp`. The server accepts `delivery` even when your schema doesn't show it, so if you send it anyway, read the node back with `journeys_get_definition` to confirm it stuck.
 
 ## Proven topologies (from production)
 
@@ -182,7 +211,8 @@ Before publishing (or handing over a spec), verify:
 4. DELAY windows respect the audience's waking hours, and the `timezone` is right — it falls back to the **organization's** timezone, which is not always the audience's. Set it explicitly when they differ.
 5. Segment-triggered ENTRY has a frequency cap unless the user explicitly wants unlimited re-enrollment.
 6. Each `MANAGE_CONVERSATION` `goal`, if set, is one step-specific instruction that fits inside the initiative objective, not a second objective.
-7. EXIT `outcome` labels are meaningful (`recovered`, `no_response`) — they show up in analysis.
+7. A send with `delivery: "draft"` is one the user asked to review, it isn't on a Transactional journey, and its `REJECTED` path goes where the user expects (unwired ends the run).
+8. EXIT `outcome` labels are meaningful (`recovered`, `no_response`) — they show up in analysis.
 
 ## Debugging a live journey
 
@@ -190,6 +220,7 @@ Before publishing (or handing over a spec), verify:
 - **"Second message never sent"** → the `TIMEOUT` edge is missing on the wait node, or the follow-up template is not APPROVED.
 - **"Message arrived with blank / `{{1}}` values"** → `templateBindings` is missing on the SEND_MESSAGE node, **or** a binding uses a path the resolver can't reach (e.g. `attributes.bank` / `customer.attributes.bank` instead of `person.bank`). Check each binding against `journeys_message_variables`; `journeys_validate` flags an unresolvable path.
 - **"Some people got nothing"** → a CASE value with no matching branch falling to an unwired default, or Do Not Contact suppression (expected, server-side).
+- **"The run is stuck at a send step"** → the node may be `delivery: "draft"` with a draft waiting. Check `drafts_list` for a PENDING draft on that `nodeId`.
 - **"Person enrolled twice"** → segment-triggered ENTRY without `maxEnrollments` / `enrollmentWindow`.
 
 See [`CONTEXT.md`](../../CONTEXT.md) for the domain model. Template authoring: [`whatsapp-templates`](../whatsapp-templates/SKILL.md), [`email-templates`](../email-templates/SKILL.md). Segments: [`cdp-and-segments`](../cdp-and-segments/SKILL.md).

@@ -19,6 +19,7 @@ An initiative is one mission: an audience, a goal, and the flow that carries it 
 | `extraction_schema_get` / `extraction_schema_set` | Read/declare the typed fields to pull from every conversation, set before launch | read / write |
 | `initiatives_participants_add` | Enroll people | **admin** |
 | `initiatives_launch` | Start outreach | **admin** |
+| `drafts_list` / `drafts_decide` | Review and approve sends held as drafts (optional step 9) | read / write |
 
 > Tool names may drift while Boom's MCP is in beta. On `tool_not_found`, list tools and match the `domain_action` pattern.
 
@@ -38,9 +39,10 @@ An initiative is one mission: an audience, a goal, and the flow that carries it 
 4. **Build the journey** — `journeys_create_draft`, then `journeys_validate` (see `design-journey`). An initiative created over MCP or REST has no journey until you make one, and it cannot launch without one.
 5. **Attach the opener**: `whatsapp_numbers_list` → pick/create the template (see `whatsapp-templates`) → `initiatives_templates_set`. New templates take ~24–48h for Meta approval — create them early. On an email initiative the first send is a `SEND_EMAIL` node with a published email template instead, see `email-templates`; there's no approval wait.
 6. **Set the extraction schema before launching**, if the mission needs structured fields back (`extraction_schema_set`). A conversation is extracted against whichever schema was current when it ran, and a closed conversation can't be re-extracted under new fields via the API, so declare it now rather than after the first results come in. Six field types (`bool`, `int`, `enum`, `enum[]`, `string`, `string[]`); `topic`, `problem`, and `competitor` are reserved slugs that get rejected. Each field's `description` is the instruction the model reads to fill it, not a label, so write it like a briefing. Extraction only runs on conversations with at least 3 messages and 1 inbound reply: a cold audience that stays silent yields no fields for whoever never answers.
-7. **Verify** with `initiatives_get`; read back name/objective/template/journey. **The next two steps message real customers, get explicit confirmation.**
+7. **Verify** with `initiatives_get`; read back name/objective/template/journey. **Launching and enrolling message real customers, get explicit confirmation.**
 8. **Launch** with `initiatives_launch` (requires org admin). This flips DRAFT → ACTIVE and publishes the journey for you, on the WhatsApp or the email channel, so no separate `journeys_publish` is needed. Launching with nobody enrolled sends nothing, which is what makes the next step safe to stage.
-9. **Enroll participants** (`initiatives_participants_add`, with `phoneNumber` on WhatsApp or `email` on email, see `manage-participants`) — **after launch, not before.** Enrollment requires an ACTIVE initiative and a published journey; on a DRAFT it fails with `initiative_not_active`. Each person added **receives a real message immediately**, so enroll one test contact first, confirm it arrives and reads correctly, then add the rest.
+9. **(Optional) review the first sends as drafts.** For a first run to a new audience, set `delivery: "draft"` on the journey's send nodes (template WhatsApp or email) before launching. Each send is then held on the initiative's **Drafts** tab until someone approves it, so the user can read real, personalized messages before anyone receives them. Approve with `drafts_decide` only after the user has seen the content and said yes. Switch back to immediate delivery in a new journey version once they trust it. Not available on Transactional initiatives. See `design-journey`, "Hold sends for approval".
+10. **Enroll participants** (`initiatives_participants_add`, with `phoneNumber` on WhatsApp or `email` on email, see `manage-participants`) — **after launch, not before.** Enrollment requires an ACTIVE initiative and a published journey; on a DRAFT it fails with `initiative_not_active`. Each person added **receives a real message immediately**, so enroll one test contact first, confirm it arrives and reads correctly, then add the rest.
 
 ## Enrolling people
 
@@ -137,10 +139,11 @@ Pattern from winners: Q1 = the core "why" (DEEP), Q2 = reaction to the concrete 
 | Symptom | Cause | Fix |
 |---|---|---|
 | `forbidden` on participants/launch | The signed-in user isn't an org admin | An org admin runs it, or launch from the Boom app |
-| `initiative_not_active` on `participants_add` | You enrolled before launching | Launch first, then enroll — see step 9 |
+| `initiative_not_active` on `participants_add` | You enrolled before launching | Launch first, then enroll — see step 10 |
 | Bare `Internal error` on `initiatives_create` | Almost always a duplicate initiative name in the org | Check `initiatives_list` and pick another name. The underlying uniqueness conflict isn't mapped to a clean error yet |
 | `initiatives_update` rejected | Initiative left DRAFT | Only DRAFT is editable; changes after activation go through the app |
 | `guidingQuestions` ignored on update | They can only be set at creation | No public edit path — cancel and recreate, or fix it in the app |
+| Launched and enrolled, but nothing sent | A send node has `delivery: "draft"`, so the messages are waiting for approval | Check the initiative's **Drafts** tab or `drafts_list` for PENDING drafts; approve them once the user has reviewed the content |
 | Launch succeeds, then no message arrives | A round's template was still `PENDING` when that round fired | **Nothing checks template approval before sending.** `journeys_validate`, publish and launch all pass with unapproved templates; the failure only appears per-send, as free text on the step, with no error code. Confirm every round is `APPROVED` with `templates_list` before you enroll anyone |
 | `409 initiative_not_draft` on launch | Already launched, or cancelled/archived | Only a DRAFT launches |
 | `422 no_outreach_template` on launch | Round one has no approved, active WhatsApp template linked | Approve/attach one first, see `whatsapp-templates` |
