@@ -67,8 +67,10 @@ There is no "send this email now" tool. An email goes out when a journey reaches
 
 1. `journeys_email_templates` gives you the PUBLISHED template ids, their `variables[].key`, the org's `readiness`, and the senders (`usableAsFrom`).
 2. Add a `SEND_EMAIL` node with `templateId` (and `templateName`). `bindings` is optional: an unbound variable resolves its own authored `path`. `fromSenderIdOverride` / `replyToSenderIdOverride` override the template's senders for this node only.
-3. It emits **`SENT`** only. Its successor may **not** be `WAIT_FOR_REPLY`, `MANAGE_CONVERSATION` or `CONVERSATION_BLOCK` (`SEND_EMAIL_INVALID_SUCCESSOR`): email has no reply. Follow it with a `DELAY`, an `EXIT`, or another send/logic node.
+3. It emits **`SENT`**, plus the optional **`SKIPPED`** (Smart Sending's cap refused the send; unwired, the run ends there). Its successor may **not** be `WAIT_FOR_REPLY`, `MANAGE_CONVERSATION` or `CONVERSATION_BLOCK` (`SEND_EMAIL_INVALID_SUCCESSOR`): email has no reply. Follow it with a `DELAY`, an `EXIT`, or another send/logic node.
 4. Publish is refused unless the template is PUBLISHED **and** a From address resolves, meaning `readiness.verified` and `readiness.hasSender` are true, or the node sets a `fromSenderIdOverride` that is `usableAsFrom`. A domain that isn't verified is set up in the Boom app, not over MCP.
+
+**Review each email before it goes out.** Set `delivery: "draft"` on the `SEND_EMAIL` node and every send is rendered for that person (variables filled, final subject and body) and held on the initiative's **Drafts** tab instead of sent. Read them there or with `drafts_list`, then approve or reject with `drafts_decide`. Approving sends exactly what was drafted, so a template edited afterwards doesn't change a waiting draft. A drafted node gains an optional `REJECTED` handle, and the successor rule above applies to it too. Approving sends real email: show the user what will go out and get an explicit yes first. Not available on a Transactional initiative's journey. Details in `design-journey`, "Hold sends for approval".
 
 Handles are easy to guess wrong. `DELAY`'s output is **`SENT`**, not `DONE`. Read `journeys_authoring_catalog` for every node's `outputHandles` rather than assuming.
 

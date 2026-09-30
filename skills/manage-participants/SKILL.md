@@ -15,6 +15,7 @@ description: Use when the user wants to add people to an EXISTING Boom initiativ
 | `initiatives_participant_get` | One participant's detail | read |
 | `initiatives_participants_stop` | Stop outreach to one participant (data retained) | **admin** |
 | `initiatives_participant_messages_list` | Full transcript for one participant | read |
+| `drafts_list` | Sends waiting for approval, when a participant seems stuck at a send step | read |
 
 ## Core rules
 
@@ -41,6 +42,7 @@ description: Use when the user wants to add people to an EXISTING Boom initiativ
 |---|---|---|
 | `error.code: "forbidden"` | The signed-in user isn't an org admin, and this write sends real messages | An org admin runs it, or do it from the Boom app |
 | Person missing after add | DNC suppression | Expected; report, don't retry |
+| Participant stuck at a send step, nothing sent | The send node holds sends for approval (`delivery: "draft"`) and their draft is waiting | Check `drafts_list` (filter by `initiativeId`) for a PENDING draft. Approving it sends a real message, so show the user the content first. Drafts don't expire, so the participant waits until someone decides |
 | `next_cursor` keeps returning | You're re-sending the first-page call | Pass the *previous response's* cursor each time; stop at `null` |
 
 See [`CONTEXT.md`](../../CONTEXT.md) for the domain model.
