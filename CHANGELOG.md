@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Drafts: approve by template version, leave odd drafts out.** `design-journey` teaches the `templateId` / `templateUpdatedAt` filter keys (decide only the version the user read) and the `odd` filter: count `odd: "only"` before any filter approve, show those drafts, and approve with `odd: "exclude"` by default. Notes `drafts_too_many_odd` and that unknown filter keys are refused.
 - **Drafts: size before you decide.** `design-journey` covers `drafts_get` and `drafts_count`, uses the server `asOf` that `drafts_list` now returns, and passes `expectedCount` on a filter `drafts_decide` (refused with `draft_count_changed` when the set changed). `launch-initiative` lists the new tools.
 - **Journey send drafts.** `design-journey`: `SEND_MESSAGE` (template mode) and `SEND_EMAIL` take `delivery: immediate | draft` and emit `SENT`, the optional `SKIPPED` (Smart Sending's cap) and, with `draft`, the optional `REJECTED`; the "no signal may be left unwired" rule now names the optional handles. New "Hold sends for approval" section: when to suggest it, setting it, wiring `REJECTED`, the limits (no free-text WhatsApp, SMS, Instagram, Messenger or Transactional), reviewing on the Drafts tab or with `drafts_list` / `drafts_decide`, never approving without the user's explicit yes, and reconnecting `/mcp` when the client's schema predates `delivery`. `email-templates`, `launch-initiative`, `manage-participants` and `boom-overview` point to it, and `launch-initiative` gains a "nothing sent: check for waiting drafts" row.
 
