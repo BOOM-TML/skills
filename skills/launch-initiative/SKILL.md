@@ -26,7 +26,7 @@ An initiative is one mission: an audience, a goal, and the flow that carries it 
 ## When to use / when not to
 
 - Use whenever a group of customers needs a real conversation with a goal: win back the ones who dropped off, qualify inbound leads, walk someone through onboarding, collect a missing document, follow up an NPS score, understand why people churn.
-- NOT for a one-off blast. An initiative holds a multi-turn conversation and pursues an objective; if you only need to push a message, that's a flow with a send step (see `design-journey`).
+- NOT for a one-off blast. An initiative holds a multi-turn conversation and pursues an objective. One message to a list, once (with an optional WhatsApp follow-up) is a Campaign: use `send-campaign`. One message every time an event happens in the user's system is a Transactional: use `transactional-notifications`.
 - Only reading existing results → `analyze-results`. Audience building → `cdp-and-segments`.
 
 ## Workflow

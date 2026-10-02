@@ -35,6 +35,7 @@ Segment / CSV / API  ──►  Participants  ──►  Initiative  ──►  
                           WhatsApp Template (pre-approved opener)
 ```
 
+- **Campaign** and **Transactional**: two simpler kinds of initiative whose flow Boom builds for you from a setup. A Campaign sends one message per channel to a list, once (`send-campaign`); a Transactional sends one per event from your system (`transactional-notifications`).
 - **Initiative** — one mission. Carries its `objective`, a Markdown `context` briefing the agent, guiding questions, and lifecycle (`DRAFT → ACTIVE → COMPLETED`). Everything hangs off it.
 - **Participant** — one person enrolled in one initiative. No global list, no delete (stopping retains data).
 - **Journey** — the workflow graph behind the initiative (send template → wait → AI conversation → follow-ups). A new initiative starts **without one**; you **author and publish it via MCP** (create draft → add/connect nodes → validate → publish) or build it in Boom's visual builder — both act on the same graph.
@@ -66,6 +67,8 @@ Inbound has no authoring skill because there's nothing to author: when a custome
 | Connect a Postgres/MySQL/Shopify data source | `connect-your-data` |
 | Find people, build or refresh an audience | `cdp-and-segments` |
 | Create & launch a new initiative, whatever the job | `launch-initiative` |
+| Send one message to a list, once (a promo, an announcement), with an optional follow-up | `send-campaign` |
+| Send a notification every time an event happens in their system (payment link, order) | `transactional-notifications` |
 | Write or fix a WhatsApp opening message | `whatsapp-templates` |
 | Build, publish or send an email template | `email-templates` |
 | Design follow-up rounds, branching, timing | `design-journey` |
