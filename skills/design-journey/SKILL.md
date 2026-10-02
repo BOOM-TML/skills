@@ -41,7 +41,7 @@ Tool names follow `domain_action`; if a call fails with `tool_not_found`, list a
 | `WAIT_FOR_REPLY` | action | Passive wait for the first reply (no AI) | `maxTimeout` | `REPLIED`, `TIMEOUT` |
 | `MANAGE_CONVERSATION` | action | The AI-led conversation | `mode: AGENT \| ESCALATE`, optional `goal` (instructions for this step only; AGENT-mode only, see "Step goals"), optional `inactivityTimeout` (any value up to `24h`, under `30m` allowed but flagged; AGENT-mode only, and gated by the `journey-inactivity-timeout` flag — without it the node falls back to a single 7-day wait) | `CLOSED`, `STALE` — a configured `inactivityTimeout` *closes* the conversation, so it routes `CLOSED`; there is no separate inactivity handle |
 | `CONVERSATION_BLOCK` | action | **Legacy** combined wait + AI conversation | `mode`, `maxTimeout`, `goal` | `CLOSED`, `TIMEOUT`, `STALE` |
-| `DELAY` | logic | Wait | `mode: duration` (`2d`) \| `until_date` (ISO instant) \| `until_weekday` (weekdays + time window + IANA timezone) | `SENT` |
+| `DELAY` | logic | Wait | `mode: duration` (`2d`) \| `until_date` (ISO instant) \| `until_weekday` (weekdays + time window + IANA timezone, optional `endOnReply`) | `SENT`, plus `REPLIED` with `endOnReply` |
 | `DECISION` | logic | Two-way branch | `logic: AND \| OR` + conditions: person attribute predicate, event occurred, custom-object match, or a runtime value | `YES`, `NO` |
 | `CASE` | logic | Multi-way switch on one person attribute (≤10 branches) | `selectionPath` + `branches[]`; a wired **default** is mandatory | `case:<branchId>` + `case:default` |
 | `HTTP_REQUEST` | action | Call an external endpoint (your API / a webhook) | `method`, `url` (supports `{{variable}}`), `headers`, `body`, `credentialId`, `timeoutMs` (≤30s), `maxAttempts` (≤5) | `SUCCESS`, `FAILED` |
@@ -160,7 +160,9 @@ Prefer a **generous window** over a tight one. A one-hour window means any queue
 
 **3. Multi-round follow-up** (re-contact non-responders). **How you space the rounds depends on whether the campaign runs once or forever, and getting this wrong silently double-messages people.**
 
-The rule behind it: a `DELAY` is a **pure wait — it does not race an incoming reply**. Someone who answers while parked on a `DELAY` still gets answered by the AI (that pipeline is independent of the journey), but the graph never learns about it, so the next round fires anyway. Only `WAIT_FOR_REPLY` and `MANAGE_CONVERSATION` listen.
+For a one-time send to a list with a single reminder, don't build rounds at all: a Campaign's WhatsApp follow-up (`whatsapp.followUp`, see [`send-campaign`](../send-campaign/SKILL.md)) does it, with business hours and "a reply first means it never sends" built in. Build rounds by hand only when you need more than one reminder or an Initiative's conversation.
+
+The rule behind it: by default a `DELAY` is a **pure wait, it does not race an incoming reply**. Someone who answers while parked on a `DELAY` still gets answered by the AI (that pipeline is independent of the journey), but the graph never learns about it, so the next round fires anyway. Only `WAIT_FOR_REPLY` and `MANAGE_CONVERSATION` listen, plus one exception: an `until_weekday` `DELAY` with `endOnReply: true` ends on `REPLIED` when the person replies while it waits, instead of `SENT`. Wire `REPLIED` (usually to `MANAGE_CONVERSATION`); unwired, the run ends. `endOnReply` does nothing in the other modes.
 
 *One-time campaigns* (research, win-back, a single cohort) — put the **whole gap inside `WAIT_FOR_REPLY`** so every hour between rounds is connected to an agent block:
 ```
@@ -174,7 +176,11 @@ Size each timeout to the real clock gap you want: a 10:00 opener, a 16:00 nudge 
 … SEND_MESSAGE(r1) ─SENT→ WAIT_FOR_REPLY(8h) ─TIMEOUT→ DELAY(until_weekday, next window) ─SENT→ SEND_MESSAGE(r2) → …
                                   └─REPLIED→ MANAGE_CONVERSATION ─CLOSED→ EXIT
 ```
-The residual risk is real but bounded: someone replying during that `DELAY` gets a follow-up they didn't need. Shrinking the `DELAY` doesn't fix it, lengthening the `WAIT_FOR_REPLY` does.
+The residual risk is real but bounded: someone replying during that `DELAY` gets a follow-up they didn't need. Shrinking the `DELAY` doesn't fix it; setting `endOnReply: true` on that `until_weekday` `DELAY` and wiring its `REPLIED` handle to the conversation does:
+```
+… WAIT_FOR_REPLY(8h) ─TIMEOUT→ DELAY(until_weekday, endOnReply) ─SENT→ SEND_MESSAGE(r2) → …
+                                      └─REPLIED→ MANAGE_CONVERSATION
+```
 
 Each round needs its own approved follow-up template.
 

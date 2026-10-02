@@ -90,6 +90,8 @@ Either way, Claude selects the right skill from its `description` — typing the
 | [`connect-your-data`](skills/connect-your-data/SKILL.md) | Sync your Postgres/MySQL/Shopify data into Boom's CDP (read-only user, SSH tunnel, mapping SQL) |
 | [`cdp-and-segments`](skills/cdp-and-segments/SKILL.md) | Query Boom's CDP and build segments to target |
 | [`launch-initiative`](skills/launch-initiative/SKILL.md) | Create and launch any initiative end-to-end, with the context-authoring formula from Boom's best performers |
+| [`send-campaign`](skills/send-campaign/SKILL.md) | Send one WhatsApp and/or email message to a list, once, now or at a set time, with an optional WhatsApp follow-up |
+| [`transactional-notifications`](skills/transactional-notifications/SKILL.md) | Send a notification every time an event happens in your system, with the Events API request to send it |
 | [`whatsapp-templates`](skills/whatsapp-templates/SKILL.md) | Write WhatsApp openers that pass Meta review and earn replies |
 | [`email-templates`](skills/email-templates/SKILL.md) | Build, publish and send email templates (blocks or HTML) from a journey's SEND_EMAIL step |
 | [`design-journey`](skills/design-journey/SKILL.md) | Design or debug the workflow graph behind an initiative (follow-up rounds, branching, timing) |
