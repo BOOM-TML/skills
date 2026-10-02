@@ -85,7 +85,8 @@ Each variable comes from a field of the event, a field of the customer's profile
 
 - Pass it on `initiatives_transactional_configure`. It **replaces the whole list**; `[]` clears it; omit it to keep what is set. At most 10 names, letters, numbers and underscores only.
 - **With `parallelRunsBy`, a stop event cancels only the run whose key it carries**, so record it with the same property (`paymentLinkId`). Without that field it cancels nothing.
-- `shopify_checkout_completed` **never stops anything**: Boom ingests it without passing it to journeys. Use an event your own system records instead.
+- `shopify_checkout_completed` and `shopify_cart_checked_out` **never stop anything**: Boom ingests them without passing them to journeys. Use an event your own system records instead.
+- The trigger event itself is never kept as a stop event; Boom drops it from the list.
 - `initiatives_transactional_get` returns the current list.
 
 ## Sending the event
@@ -122,5 +123,5 @@ Full reference: https://docs.useboom.ai/events
 | `400 transactional_not_recurring` | A Transactional cannot also be recurring. |
 | `400 not_transactional` | A Transactional tool was called on another kind of initiative. |
 | Event recorded, nothing sent | It went through bulk ingest, the name does not match `eventName`, the Transactional is not launched, the event lacks the `parallelRunsBy` field, it arrived outside business hours and is waiting, or a stop event cancelled it. |
-| A stop event did not cancel | Under `parallelRunsBy` it lacks the same property, or it is `shopify_checkout_completed`, which never reaches journeys. |
+| A stop event did not cancel | Under `parallelRunsBy` it lacks the same property, or it is `shopify_checkout_completed` or `shopify_cart_checked_out`, which never reach journeys. |
 | WhatsApp stopped arriving for one customer | Their profile was saved without `phoneNumber`. Save the complete profile. |
