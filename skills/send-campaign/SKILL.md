@@ -93,7 +93,7 @@ When the user wants to re-contact people who did not answer, add `followUp` insi
 - `afterDays`: 1 to 30 days without a reply before it goes out. It sends from the same number. Bind every placeholder of its template.
 - `businessHours` (optional): ISO weekdays, 1 = Monday to 7 = Sunday, and a `start` before `end` in `HH:mm`, in the organization's timezone. Outside those hours it waits for the next opening. Same-day windows only.
 - Anyone who replies first, including while it waits for business hours, goes to the agent and **never gets the follow-up**.
-- It **does not count against Smart Sending**: a campaign counts once per person, so the follow-up is never skipped by the frequency limit.
+- It **does not count against Smart Sending**: a campaign set up with these tools (or the app's campaign form) counts once per person, so the follow-up is never skipped by the frequency limit. A one-time flow built by hand with the journeys tools gets no such exemption: every send in it is limited.
 - With `reviewBeforeSending`, the follow-up waits in Drafts too.
 - In a `whatsapp` patch, leaving `followUp` out keeps it, and `"followUp": null` removes it.
 - It is **locked once people are in the campaign**: set it before scheduling. Changing or removing it then is refused; cancel and create a new campaign.
