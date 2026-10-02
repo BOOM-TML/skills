@@ -12,7 +12,7 @@ A **Transactional** sends a notification every time an event arrives: one event,
 | Tool | Purpose | Scope |
 |---|---|---|
 | `initiatives_create` with `transactional` | Create it with its whole setup in one call | write |
-| `initiatives_transactional_configure` | Change the setup; only the fields you pass change | write |
+| `initiatives_transactional_configure` | Change the setup, including `businessHours` and `stopEventNames`; only the fields you pass change | write |
 | `initiatives_transactional_get` | Read the setup and `missing`: what still blocks launch | read |
 | `initiatives_launch` | Go live: every matching event from now on sends | **admin** |
 | `journeys_message_channels` / `journeys_message_templates` | WhatsApp sending numbers and their APPROVED templates | read |
@@ -73,7 +73,20 @@ Each variable comes from a field of the event, a field of the customer's profile
 - ISO weekdays, 1 = Monday to 7 = Sunday; `start` before `end`, `HH:mm`, same day only.
 - Pass it in the `transactional` object or on `initiatives_transactional_configure`. Omit it to keep what is set; `null` sends at any time again.
 - Boom builds it as one wait step right after the trigger. It is never a send window on the message, and it works with `parallelRunsBy`. Do not add waits to a Transactional's journey with the journeys tools; any other wait is refused at publish.
-- **Stop events**: with business hours a run can wait overnight, so an event that should cancel the notification (`payment_link_accepted`) can now matter. Stop events are set in the Boom app, on the Transactional's page; they are not a field of `initiatives_transactional_configure`.
+- **Stop events**: with business hours a run can wait overnight, so an event that should cancel the notification can matter now. See "Stop events" below.
+
+## Stop events
+
+`stopEventNames` lists events that cancel a notification still waiting to send. Set them when business hours are on; without business hours a run ends in seconds, so a stop event almost never arrives in time.
+
+```json
+{ "stopEventNames": ["payment_link_accepted"] }
+```
+
+- Pass it on `initiatives_transactional_configure`. It **replaces the whole list**; `[]` clears it; omit it to keep what is set. At most 10 names, letters, numbers and underscores only.
+- **With `parallelRunsBy`, a stop event cancels only the run whose key it carries**, so record it with the same property (`paymentLinkId`). Without that field it cancels nothing.
+- `shopify_checkout_completed` **never stops anything**: Boom ingests it without passing it to journeys. Use an event your own system records instead.
+- `initiatives_transactional_get` returns the current list.
 
 ## Sending the event
 
@@ -108,5 +121,6 @@ Full reference: https://docs.useboom.ai/events
 | `422 transactional_event_only` | People cannot be added by hand. A Transactional starts only from its event. |
 | `400 transactional_not_recurring` | A Transactional cannot also be recurring. |
 | `400 not_transactional` | A Transactional tool was called on another kind of initiative. |
-| Event recorded, nothing sent | It went through bulk ingest, the name does not match `eventName`, the Transactional is not launched, the event lacks the `parallelRunsBy` field, or it arrived outside business hours and is waiting. |
+| Event recorded, nothing sent | It went through bulk ingest, the name does not match `eventName`, the Transactional is not launched, the event lacks the `parallelRunsBy` field, it arrived outside business hours and is waiting, or a stop event cancelled it. |
+| A stop event did not cancel | Under `parallelRunsBy` it lacks the same property, or it is `shopify_checkout_completed`, which never reaches journeys. |
 | WhatsApp stopped arriving for one customer | Their profile was saved without `phoneNumber`. Save the complete profile. |
