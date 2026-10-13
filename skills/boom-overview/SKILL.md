@@ -68,6 +68,7 @@ Inbound has no authoring skill because there's nothing to author: when a custome
 | Create & launch a new initiative, whatever the job | `launch-initiative` |
 | Write or fix a WhatsApp opening message | `whatsapp-templates` |
 | Build, publish or send an email template | `email-templates` |
+| Create, edit or launch a Lead Capture pop-up on a website, or read its leads | `lead-capture` |
 | Design follow-up rounds, branching, timing | `design-journey` |
 | Hold sends for review, approve or reject drafts | `design-journey` ("Hold sends for approval") |
 | Add/stop/inspect people in a running initiative | `manage-participants` |
