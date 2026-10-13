@@ -78,7 +78,7 @@ While ACTIVE, a change that would break one of these is refused too. Pause first
 
 When a WhatsApp number is asked, `copy.consentText` shows beside an unticked box, and the visitor must tick it. Boom stores whether they ticked it, the exact sentence and language they saw, and when. Name the brand in the sentence. A visitor who leaves the box unticked (email-only form) is saved as a lead but never enters a journey.
 
-Set `flow.termsUrl` (https) to link the store's terms: the `*highlighted*` phrase in `consentText` becomes a link to it, opened in a new tab, and the lead records `consent_terms_url`. Without it, the phrase is only highlighted.
+Set `flow.termsUrl` (https) to link the store's terms: the `*highlighted*` phrase in `consentText` becomes a link to it, opened in a new tab, and the lead records `consent_terms_url`. Without it, the phrase is only highlighted. A pop-up with a terms link but no `*marked*` phrase in the English sentence cannot go live.
 
 ## Quiz
 
