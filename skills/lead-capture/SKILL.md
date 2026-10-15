@@ -61,7 +61,26 @@ While ACTIVE, a change that would break one of these is refused too. Pause first
 1. **Allowed sites.** `allowedOrigins` lists every site that hosts the pop-up, as bare origins. Matching is exact: `https://example.com` does not cover `https://www.example.com`. For a Shopify store, add both the public domain and the `*.myshopify.com` domain (the theme editor preview runs on the latter). Sending `allowedOrigins` replaces the whole list.
 2. **The tag.** `installTag` from `get` goes at the end of the page body on every page that should show it. The install key is public; it identifies the pop-up and authorizes nothing.
 3. **Opening from a button.** Any element with `data-boom-lead-capture-open="<installKey>"` opens it on click (`buttonTag` is a ready one), even for a visitor who closed it before. Set `trigger.kind: "click"` to open it only that way.
-4. **Shopify.** If the store's Boom app exposes a Lead Capture option under **Online Store → Themes → Customize → App embeds**, turning it on and pasting the install key replaces the manual tag. Otherwise paste the tag in the theme's `theme.liquid`.
+4. **Shopify.** See the next section: the user turns it on in their Shopify admin.
+
+## Install on a Shopify store (the user does this)
+
+You can't do this step: it happens in the store's Shopify admin. Hand the user these steps, with their install key filled in, and wait for them to confirm. In Boom the same steps are in the pop-up's **Install** section, on the **Shopify** tab (shown when the org has Shopify connected).
+
+1. In Shopify: **Online Store → Themes → Customize** (on the live theme).
+2. Open **App embeds** (the puzzle icon in the left bar) and expand **Boom Chat Widget**.
+3. Turn on **Enable Lead Capture pop-up** and paste the install key (`blc_live_…`, from `lead_capture_forms_get`) in **Lead Capture install key**.
+4. Leave **Enable AI Chat** and **Enable WhatsApp** off unless the store uses Boom's chat: AI Chat is on by default the first time the embed is turned on.
+5. **Save.**
+
+If there's no **Boom Chat Widget** under App embeds, or it has no Lead Capture setting, the store's Boom app predates the pop-up. Ask Boom to update the store's app, or meanwhile paste `installTag` just before `</body>` in the theme's `layout/theme.liquid` (Online Store → Themes → ⋯ → Edit code).
+
+Then check it with the user:
+- The pop-up must be **ACTIVE** and the store's domains in `allowedOrigins` (the public domain and `*.myshopify.com`), or the embed loads nothing.
+- Open the store in a private window (a visitor who closed or submitted the pop-up doesn't see it again for a while) and wait for the trigger (e.g. the delay).
+- Submit once with a real test number and email, then confirm the lead with `lead_capture_leads_list` and that the welcome journey ran.
+
+Pausing the pop-up in Boom (`status: "PAUSED"`) takes it off the store within minutes, without touching Shopify.
 
 ## Prizes and codes
 
@@ -161,7 +180,9 @@ A wellness store ("Raíz") wants: "¿Quieres un 10%?" → "¿Qué te interesa tr
 
 3. `lead_capture_forms_get`: check `liveIssues` is empty and the copy reads right.
 4. Build and validate the journey: `lead_captured` → `CASE attributes.interes` → a WhatsApp template per branch bound to `promo_code` and `link_url` → `WAIT_FOR_REPLY` → `MANAGE_CONVERSATION`. Keep it unpublished until the template is approved and the code exists in the store.
-5. With the user's go: publish the journey, then `lead_capture_forms_update` `{ "status": "ACTIVE" }`, then install the tag (or turn on the Shopify embed).
+5. With the user's go: publish the journey, then `lead_capture_forms_update` `{ "status": "ACTIVE" }`, then the user installs it: the tag, or on Shopify the steps in **Install on a Shopify store**.
+
+After any setup, end by telling the user what's still missing before leads get anything: usually the welcome journey (with an approved WhatsApp template), and on Shopify the embed in their theme.
 
 ## Troubleshooting
 
