@@ -39,7 +39,7 @@ Pages already open keep working for an hour after a publish. Visitors get a new 
 
 - Objects merge key by key; **lists replace whole** (`steps`, `fields`, `options`, `endings`, `hidden`, `constants`) — send the full list.
 - Unknown fields are refused with their path.
-- Text is `{ "en": "…", "es": "…", "pt": "…" }`; `en` is required, a blank language shows English.
+- Text is `{ "en": "…", "es": "…", "pt": "…" }`. A form is written in one language, `language.default` (`en`, `es` or `pt`; set it on create, e.g. `es` for a Spanish form): the required copy must be filled in that language. Visitors whose browser language is fully written see it; everyone else sees the form's own language, never a mix. `language.fixed: true` shows the default language to everyone.
 
 ## The draft
 
@@ -50,8 +50,8 @@ Pages already open keep working for an hour after a publish. Visitors get a new 
 | Results | `scoring.enabled`, `endings[]` (`id`, `key` — the stored result — `title`, `body`, `buttonLabel`/`buttonUrl`, `redirectUrl`, `scoreMin`/`scoreMax`). Exactly one ending has no range: it shows when no range matches. Ranges may not overlap |
 | Extra data | `hidden[]` (`key`, `from`: `query` or `data`) — carried from the page's address or the container's `data-*`; `utm_*` are kept automatically. `constants[]` (`key`, `value`) — fixed values on every event, e.g. a webinar date |
 | Consent | `consent.marketingText` (required when a phone is asked: the WhatsApp opt-in box), `consent.processingText` + `consent.privacyNoticeUrl` (required on a sensitive form), `consent.termsUrl` |
-| Design | `accentColor`, `theme`, `style` (colors, `font`, `buttonShape`, `radius`), `width` (`narrow`, `medium`, `full`), `logoUrl`, `copy` (button words) |
-| Other | `retentionDays`, `analytics.dataLayer`, `defaultCountry`, `hosted` (below) |
+| Design | `look` (one of `paper`, `graphite`, `sand`, `forest`, `ocean`, `plum`, `mono`, `brand`: colours, font and shape in one choice; `brand` is tinted with `accentColor`), `accentColor`, `presentation` (overrides: `font`, `radius`, `answerStyle` `outline`/`filled`, `align`, `questionSize`, `stageHeight`, `backgroundImageUrl` + `backgroundDim`, `transparent`), `style` colour overrides (`background`, `textColor`, `headingColor`, `buttonTextColor`) and `buttonShape`, `width` (`narrow`, `medium`, `full`), `logoUrl`, `copy` (button words), `welcome` (optional first screen: `enabled`, `title`, `body`, `buttonLabel`) |
+| Other | `retentionDays`, `enrollmentsPerHour` (journey enrollments per hour, default 50, at most 500; responses past it are saved but not enrolled), `analytics.dataLayer`, `defaultCountry`, `hosted` (below) |
 
 Publishing rules: at least one question; a **required** email or phone question that `mapsTo` the person; option values and keys valid and unique; every live question in exactly one step; endings as above.
 
@@ -76,4 +76,4 @@ Every site that shows it must be in `allowedOrigins` (exact origins: `https://ex
 
 ## Journeys on the event
 
-The event `<slug>_submitted` carries every non-sensitive answer by key, `score`, `ending`, hidden values, UTMs, `email`, `phone` and consent. It appears in the journey builder as soon as the form is published. Results are also on the person (`<slug>_result`, `<slug>_score`), so "everyone with result X" is a segment. Journeys only enrol people who ticked the marketing box (or forms that show none; never a sensitive form without an explicit yes). To keep another tool in sync while migrating, add an **HTTP request** step that posts the event to it.
+The event `<slug>_submitted` carries every non-sensitive answer by key, `score`, `ending`, hidden values, UTMs, `email`, `phone` and consent. It appears in the journey builder as soon as the form is published. Results are also on the person (`<slug>_result`, `<slug>_score`), so "everyone with result X" is a segment. Journeys only enrol people who ticked the marketing box (or forms that show none; never a sensitive form without an explicit yes), never someone on Do Not Contact (their event says `consent_marketing: false`), and at most `enrollmentsPerHour` an hour per form. To keep another tool in sync while migrating, add an **HTTP request** step that posts the event to it.
