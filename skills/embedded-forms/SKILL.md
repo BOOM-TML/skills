@@ -72,8 +72,12 @@ Give the user both tags from `get`, pasted where the form should appear:
 
 Every site that shows it must be in `allowedOrigins` (exact origins: `https://example.com` does not cover `https://www.example.com`).
 
+**On a Shopify store** the user places it, not you: in Shopify, **Online Store → Themes → Customize**, open the page that should show the form, **Add section → Custom Liquid**, paste both tags, **Save**. Add the public domain and the `*.myshopify.com` domain to `allowedOrigins` (the theme editor previews on the latter). If they'd rather not touch the theme, use the hosted link below.
+
 **Hosted link** — for ads, bios and emails: set `hosted.enabled: true` (plus `hosted.title` / `hosted.description` for link previews) and publish; the page is `https://www.useboom.ai/f/<org-slug>/<form-slug>`. A hosted form cannot ask for passwords, cards, PINs or one-time codes, and its endings' links must point at an allowed site.
 
 ## Journeys on the event
 
 The event `<slug>_submitted` carries every non-sensitive answer by key, `score`, `ending`, hidden values, UTMs, `email`, `phone` and consent. It appears in the journey builder as soon as the form is published. Results are also on the person (`<slug>_result`, `<slug>_score`), so "everyone with result X" is a segment. Journeys only enrol people who ticked the marketing box (or forms that show none; never a sensitive form without an explicit yes), never someone on Do Not Contact (their event says `consent_marketing: false`), and at most `enrollmentsPerHour` an hour per form. To keep another tool in sync while migrating, add an **HTTP request** step that posts the event to it.
+
+A form on its own only collects. After setting one up, offer the next step: a journey on `<slug>_submitted` (build it with `design-journey`) that follows up by result, e.g. a WhatsApp with an approved template (`whatsapp-templates`) and an email fallback for people without a phone.
