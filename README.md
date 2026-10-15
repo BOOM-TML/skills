@@ -93,6 +93,7 @@ Either way, Claude selects the right skill from its `description` — typing the
 | [`whatsapp-templates`](skills/whatsapp-templates/SKILL.md) | Write WhatsApp openers that pass Meta review and earn replies |
 | [`email-templates`](skills/email-templates/SKILL.md) | Build, publish and send email templates (blocks or HTML) from a journey's SEND_EMAIL step |
 | [`lead-capture`](skills/lead-capture/SKILL.md) | Set up, edit and launch the on-site pop-up that collects email and WhatsApp with consent (games, quiz, promo codes), read its leads, and wire the welcome journey on `lead_captured` |
+| [`embedded-forms`](skills/embedded-forms/SKILL.md) | Build, publish and embed forms inside a page or on a hosted link (typed questions, scoring, results), read responses, and build journeys on the form's event |
 | [`design-journey`](skills/design-journey/SKILL.md) | Design or debug the workflow graph behind an initiative (follow-up rounds, branching, timing) |
 | [`manage-participants`](skills/manage-participants/SKILL.md) | Add, monitor, and stop participants in an initiative |
 | [`analyze-results`](skills/analyze-results/SKILL.md) | Turn a running initiative's extracted data and transcripts into insight |
