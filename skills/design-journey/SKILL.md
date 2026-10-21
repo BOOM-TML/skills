@@ -46,6 +46,7 @@ Tool names follow `domain_action`; if a call fails with `tool_not_found`, list a
 | `CASE` | logic | Multi-way switch on one person attribute (≤10 branches) | `selectionPath` + `branches[]`; a wired **default** is mandatory | `case:<branchId>` + `case:default` |
 | `HTTP_REQUEST` | action | Call an external endpoint (your API / a webhook) | `method`, `url` (supports `{{variable}}`), `headers`, `body`, `credentialId`, `timeoutMs` (≤30s), `maxAttempts` (≤5) | `SUCCESS`, `FAILED` |
 | `DISPATCH_EVENT` | action | Record a CDP event for the person | `eventName`, static or bound `properties` | `SENT` |
+| `LOAD_OBJECT` | action | **Look up record**: load one custom object (a merchant's brand, an order) and save it under a name later steps read | `objectType`, `saveAs` (e.g. `brand`), `lookup` (`{ by: "key", keyPath }` or `{ by: "relationship", path }`), `attributes` (1–30), optional `orderBy`. See "Look up a record" | `SENT` (one way out; found / not found is recorded on the step) |
 | `EXIT` | terminal | End the journey | optional `outcome` label; optional `nextInitiativeId` to chain into another initiative | — |
 
 For new journeys, prefer **`WAIT_FOR_REPLY` + `MANAGE_CONVERSATION`** over the legacy `CONVERSATION_BLOCK` — the split gives you separate handles for "never replied" (`TIMEOUT`) vs "replied then the AI closed the conversation" (`CLOSED`), which most follow-up logic needs.
@@ -87,11 +88,25 @@ A SEND_MESSAGE references an approved template that has placeholders (`{{1}}`, `
 |---|---|---|
 | `customer.<field>` | Built-in contact fields | `customer.name`, `customer.phoneNumber` |
 | `person.<key>` | **Custom person attributes** (from people upsert / your CDP) | `person.bank`, `person.plan` |
+| `<saveAs>.<field>` | A record a **Look up record** step loaded earlier in the run | `brand.logo_url`, `order.total` |
 | run-produced values | Answers extracted in the conversation, or event/segment data carried into the run | copy the exact `path` from `journeys_message_variables` |
 
 So a binding is **not** always `person.*` — built-in fields are `customer.*`, and extracted/event/segment data has its own paths that `journeys_message_variables` returns.
 
 > ⚠️ A custom person attribute is `person.<key>` (e.g. `person.bank`) — **not** `attributes.bank` and **not** `customer.attributes.bank`. `attributes.<key>` is the DECISION/CASE **condition** syntax (from `journeys_condition_catalog`); it does not resolve in a message binding and the message will arrive blank. `journeys_validate` now rejects such a binding before publish.
+
+## Look up a record (custom objects in later steps)
+
+`LOAD_OBJECT` reads **one** custom object when the run reaches it and saves it under `saveAs`, so later steps read it like any other variable: `{{brand.logo_url}}`, `{{order.total | currency:MXN}}`. Use it whenever a message depends on a record rather than the person: a white-label merchant's logo and colors, the order an event names, the plan a person is on. It replaces "one template per merchant" or "one CASE branch per brand": a single journey and a single template serve every record.
+
+- **Find it by key** (`lookup: { by: "key", keyPath }`): `keyPath` is ONE variable whose value is the record's `externalId`, e.g. `event.merchant_id`, `person.merchant_id`, or a field of a record saved earlier (`order.brand_id`, which chains two lookups).
+- **Or by relationship** (`lookup: { by: "relationship", path }`): follow the person's links, up to three hops (person → merchant → merchant brand). The path is a list of edges with type **ids**, not names; the journey builder lists the valid ones, so prefer building that step in the app or copy a path from an existing journey. Publish refuses a path the relationship registries don't allow.
+- **`attributes`** are the only fields later steps get (1–30). `found`, `externalId` and `displayName` come with every record.
+- **Several matches** (relationship mode): set `orderBy: { attribute, direction }` to pick one. Without it, several matches load **nothing**, never an arbitrary first record.
+- **Not found never stops the run.** The step records `NOT_FOUND`, the fields are empty and the template's fallbacks render. To branch on it, put a `DECISION` on the step's **Found** output (its node-outputs path, listed by `journeys_message_variables`); `DECISION` and `CASE` can't read `brand.*` directly.
+- **`saveAs`** is one lowercase word, unique per journey, and not a built-in root (`customer`, `person`, `event`, `env`, or the run's own root).
+- **It's a snapshot.** The record is read once, when the run reaches the step. Place it right before the step that uses it, not before a long `DELAY`.
+- Saved records resolve in every send (email, WhatsApp, SMS, Instagram, Messenger), `HTTP_REQUEST` and `DISPATCH_EVENT`.
 
 ## Publish-time validation
 
@@ -100,6 +115,7 @@ So a binding is **not** always `person.*` — built-in fields are `customer.*`, 
 - Exactly **one ENTRY**, at least **one EXIT**; unique node ids; every edge references existing nodes; every node named.
 - One out-edge per `(node, signal)` — a handle may wire to **at most one** node (no fan-out), and no required signal may be left unwired (`SKIPPED` and `REJECTED` on a send node are the optional ones). `WAIT_FOR_REPLY` needs both `REPLIED` and `TIMEOUT`; `MANAGE_CONVERSATION` needs `CLOSED`; `DECISION` needs both `YES` and `NO`; `CASE` needs every branch **plus** `case:default`; `HTTP_REQUEST` needs both `SUCCESS` and `FAILED`.
 - `SEND_MESSAGE`: `templateId` and `channelId` both set — there is no silent fallback number.
+- `LOAD_OBJECT` contract: every `<saveAs>.<field>` a later step reads, **including inside its email template**, must be loaded by a lookup saved under that name that runs before it. `LOAD_OBJECT_FIELD_NOT_LOADED` means add the field to `attributes`; `LOAD_OBJECT_VARIABLE_NOT_UPSTREAM` means the lookup isn't on the path before that step.
 - Timeouts and durations use the `30m` / `24h` / `3d` format; DELAY `until_date` must be in the future; DELAY timezones must be valid IANA zones.
 - Foot-gun warnings: a `DISPATCH_EVENT` emitting the same event the ENTRY listens to (self-trigger loop), or an event that both enrolls and cancels the run.
 
@@ -200,6 +216,12 @@ An `ENTRY` can also be `cdp_event`-triggered, which lets your own system decide 
                                                                                   └─FAILED→ EXIT(needs_review)
 ```
 `HTTP_REQUEST` posts to your endpoint (authenticated with a stored credential) and its response is available to later nodes; `EXIT.nextInitiativeId` chains the person into a follow-on initiative. This is how you keep each initiative focused on one job and pass the baton between them.
+
+**7. Load the record, then send it** (white-label branding, an order total):
+```
+ENTRY(cdp_event: order_paid) ─SENT→ LOAD_OBJECT(merchant_brand by event.merchant_id, saveAs: brand) ─SENT→ SEND_EMAIL(one template, colors + logo bound to brand.*) ─SENT→ EXIT
+```
+One journey and one template serve every merchant: each run loads its own brand, and a merchant with no record gets the template's fallback branding. Swap the record for an `order` (`saveAs: order`, then `{{order.total | currency:MXN}}`) to send data the event doesn't carry.
 
 ## One objective per initiative
 
