@@ -54,6 +54,16 @@ Minimal blocks example:
 }
 ```
 
+## White-label: brand colors and logos from a record
+
+To send one template in each merchant's (or brand's) own look, store the branding on a custom object (e.g. `merchant_brand` with `logo_url`, `primary_color`, `name`), load it in the journey with a **Look up record** step saved as `brand` (see `design-journey`), and reference `brand.*` in the template, **always with a fallback**:
+
+- **A color field** (a heading or text `color`, a button `bg`, a container `background`, `body` colors) can hold a variable instead of a hex: `{{ brand.primary_color | color | default: '#111827' }}`. The `color` filter passes only a real color (hex, numeric `rgb()`/`hsl()`, a CSS color name) and turns anything else, blank or hostile, into nil, so the fallback renders instead of a broken or injected style. Keep this exact shape: the builder recognizes it and shows the field as bound, with the fallback as its swatch.
+- **A logo or image**: `{{ brand.logo_url | default: 'https://…/your-logo.png' }}`. Over MCP an `image` block's `src` must be a literal URL, so put a bound image in an `html` block: `<img src="{{ brand.logo_url | default: 'https://…' }}" alt="logo" width="200">`. Give it a fallback URL: a bound image with no fallback and no value renders broken.
+- **Text**: `{{ brand.name | default: 'Boom' }}` in the subject or body.
+
+Values from customer data are checked again at send time: one that would add a script, an event handler or a `javascript:` URL is removed before the email goes out. Preview with real data before publishing: `email_templates_preview` with `values` (e.g. `{ "brand.primary_color": "#0a7cff" }`), or the journey's email step, which runs the lookups on a real triggering event.
+
 ## Publishing and editing
 
 - **New templates are DRAFT.** A SEND_EMAIL node can only use a PUBLISHED one, so publish with `email_templates_update` `{ templateId, status: "PUBLISHED" }` once the user has reviewed it. `email_templates_get` returns the rendered HTML and text to check first.
@@ -85,6 +95,9 @@ Handles are easy to guess wrong. `DELAY`'s output is **`SENT`**, not `DONE`. Rea
 | Publish refused for the From address | Domain not verified, or no default sender | Verify the domain in the Boom app, or set a `usableAsFrom` override |
 | Update refused on a live template | Missing `confirm: true` | Confirm with the user, then resend with it |
 | A section vanished after save | The sanitizer stripped it (see `removed`) | Rewrite it without scripts, handlers or external CSS |
+| Publish refused: `LOAD_OBJECT_FIELD_NOT_LOADED` | The template reads `brand.<field>` but the journey's Look up record step doesn't load it | Add the field to that step's `attributes` |
+| A bound color shows the fallback for every merchant | The value isn't a color (e.g. `blue-ish`, `inherit`), or the field isn't loaded | Store a hex or CSS color name; check the lookup's `attributes` |
+| A logo shows as a broken image | Bound with no fallback and the record has no `logo_url` | Add `\| default: '<url>'` to the image token |
 | A variable renders blank | The path resolved to nothing for that person | Check the path against `journeys_message_variables` and the person's CDP data |
 
 See [`CONTEXT.md`](../../CONTEXT.md) for the domain model and [`design-journey`](../design-journey/SKILL.md) for building the journey around the send.

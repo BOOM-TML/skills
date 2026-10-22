@@ -32,6 +32,8 @@ description: Use when the user wants to query Boom's customer data platform (per
 
 ## Boom best practices
 
+- **Journeys can read a custom object, not just segment on it.** A journey's *Look up record* step loads one record (by an id the event carries, or along the person's relationships) and its later messages use the fields, e.g. a merchant's logo and colors for white-label email. So per-merchant data belongs in a custom object type (`merchant_brand`), not copied onto every person. See `design-journey`.
+
 - Prefer editing an existing segment (`segments_update`) over near-duplicate new ones.
 - CDP data is PII. Query and aggregate freely, but don't paste raw person rows into chat unless the user explicitly asks; summarize counts and distributions.
 - `phoneNumber` is the canonical phone attribute in person records too.
