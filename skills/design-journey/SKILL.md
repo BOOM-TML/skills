@@ -47,7 +47,8 @@ Tool names follow `domain_action`; if a call fails with `tool_not_found`, list a
 | `HTTP_REQUEST` | action | Call an external endpoint (your API / a webhook) | `method`, `url` (supports `{{variable}}`), `headers`, `body`, `credentialId`, `timeoutMs` (≤30s), `maxAttempts` (≤5) | `SUCCESS`, `FAILED` |
 | `DISPATCH_EVENT` | action | Record a CDP event for the person | `eventName`, static or bound `properties` | `SENT` |
 | `LOAD_OBJECT` | action | **Look up record**: load one custom object (a merchant's brand, an order) and save it under a name later steps read | `objectType`, `saveAs` (e.g. `brand`), `lookup` (`{ by: "key", keyPath }` or `{ by: "relationship", path }`), `attributes` (1–30), optional `orderBy`. See "Look up a record" | `SENT` (one way out; found / not found is recorded on the step) |
-| `EXIT` | terminal | End the journey | optional `outcome` label; optional `nextInitiativeId` to chain into another initiative | — |
+| `ROUTE_TO_INITIATIVE` | terminal | End the run here and hand the live conversation to another initiative's agent | `initiativeId` (another initiative in the org, not archived, not this one, not a Transactional), optional `context`. Needs a signed-in user over MCP. See [`route-conversations`](../route-conversations/SKILL.md) | — |
+| `EXIT` | terminal | End the journey | optional `outcome` label | — |
 
 For new journeys, prefer **`WAIT_FOR_REPLY` + `MANAGE_CONVERSATION`** over the legacy `CONVERSATION_BLOCK` — the split gives you separate handles for "never replied" (`TIMEOUT`) vs "replied then the AI closed the conversation" (`CLOSED`), which most follow-up logic needs.
 
@@ -112,7 +113,7 @@ So a binding is **not** always `person.*` — built-in fields are `customer.*`, 
 
 `journeys_validate` checks dozens of rules; the ones that trip people up most:
 
-- Exactly **one ENTRY**, at least **one EXIT**; unique node ids; every edge references existing nodes; every node named.
+- Exactly **one ENTRY**, at least **one end point** (`EXIT` or `ROUTE_TO_INITIATIVE`, which has no outgoing edges); unique node ids; every edge references existing nodes; every node named.
 - One out-edge per `(node, signal)` — a handle may wire to **at most one** node (no fan-out), and no required signal may be left unwired (`SKIPPED` and `REJECTED` on a send node are the optional ones). `WAIT_FOR_REPLY` needs both `REPLIED` and `TIMEOUT`; `MANAGE_CONVERSATION` needs `CLOSED`; `DECISION` needs both `YES` and `NO`; `CASE` needs every branch **plus** `case:default`; `HTTP_REQUEST` needs both `SUCCESS` and `FAILED`.
 - `SEND_MESSAGE`: `templateId` and `channelId` both set — there is no silent fallback number.
 - `LOAD_OBJECT` contract: every `<saveAs>.<field>` a later step reads, **including inside its email template**, must be loaded by a lookup saved under that name that runs before it. `LOAD_OBJECT_FIELD_NOT_LOADED` means add the field to `attributes`; `LOAD_OBJECT_VARIABLE_NOT_UPSTREAM` means the lookup isn't on the path before that step.
@@ -212,10 +213,10 @@ An `ENTRY` can also be `cdp_event`-triggered, which lets your own system decide 
 
 **6. Call an external system, then hand off** (chaining):
 ```
-… MANAGE_CONVERSATION ─CLOSED→ HTTP_REQUEST(POST the collected data to your API) ─SUCCESS→ DISPATCH_EVENT(done) ─SENT→ EXIT(nextInitiativeId: next)
+… MANAGE_CONVERSATION ─CLOSED→ HTTP_REQUEST(POST the collected data to your API) ─SUCCESS→ ROUTE_TO_INITIATIVE(next initiative)
                                                                                   └─FAILED→ EXIT(needs_review)
 ```
-`HTTP_REQUEST` posts to your endpoint (authenticated with a stored credential) and its response is available to later nodes; `EXIT.nextInitiativeId` chains the person into a follow-on initiative. This is how you keep each initiative focused on one job and pass the baton between them.
+`HTTP_REQUEST` posts to your endpoint (authenticated with a stored credential) and its response is available to later nodes; `ROUTE_TO_INITIATIVE` hands the live conversation to a follow-on initiative's agent (see [`route-conversations`](../route-conversations/SKILL.md)). To start a follow-on initiative without moving the conversation, put a `DISPATCH_EVENT` before the `EXIT` and make that event the other journey's trigger. Either way each initiative stays focused on one job and passes the baton.
 
 **7. Load the record, then send it** (white-label branding, an order total):
 ```
@@ -225,7 +226,7 @@ One journey and one template serve every merchant: each run loads its own brand,
 
 ## One objective per initiative
 
-An initiative's conversation is run by the AI toward the **single objective** you set on the initiative. Journeys are great at *routing* (branch, wait, call an API, hand off), but a journey should not try to make one conversation accomplish two different goals — the agent handles a focused objective far better than a split one. When a flow really has two jobs (e.g. "collect the documents" and then, later, "resolve what was wrong with them"), model them as **two initiatives chained by an event or an `EXIT.nextInitiativeId`**, not one journey with a mode switch.
+An initiative's conversation is run by the AI toward the **single objective** you set on the initiative. Journeys are great at *routing* (branch, wait, call an API, hand off), but a journey should not try to make one conversation accomplish two different goals — the agent handles a focused objective far better than a split one. When a flow really has two jobs (e.g. "collect the documents" and then, later, "resolve what was wrong with them"), model them as **two initiatives chained by an event or a `ROUTE_TO_INITIATIVE` step** ([`route-conversations`](../route-conversations/SKILL.md)), not one journey with a mode switch.
 
 A step `goal` on `MANAGE_CONVERSATION` is not a way around this. It focuses one step *within* the objective ("ask for the address first"); it does not give the conversation a second job.
 
