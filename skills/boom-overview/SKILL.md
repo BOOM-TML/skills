@@ -70,6 +70,7 @@ Inbound has no authoring skill because there's nothing to author: when a custome
 | Build, publish or send an email template | `email-templates` |
 | Create, edit or launch a Lead Capture pop-up on a website, or read its leads | `lead-capture` |
 | Design follow-up rounds, branching, timing | `design-journey` |
+| Hand a live conversation from one initiative to another (a router on one number, support then a survey) | `route-conversations` |
 | Hold sends for review, approve or reject drafts | `design-journey` ("Hold sends for approval") |
 | Add/stop/inspect people in a running initiative | `manage-participants` |
 | Summarize what an initiative learned | `analyze-results` |
