@@ -11,11 +11,13 @@ WhatsApp, email and other channels. How it behaves comes from the organization's
 its procedures, what it knows) that you read and change with the `org_context_*`
 tools. This guide is how to change them well.
 
+En español: [es.md](./es.md), or `org_context_guide` with `language: "es"`.
+
 ## Before you start
 
 - Call `org_context_guide` once per session. Every write tool (`org_context_edit`,
-  `org_context_edit_batch`, `org_context_add_procedure`, `org_context_setting_set`,
-  `org_context_publish`, `org_context_discard`) requires the `guideVersion` it
+  `org_context_edit_batch`, `org_context_add_procedure`, `org_context_add_eval`,
+  `org_context_setting_set`, `org_context_publish`, `org_context_discard`) requires the `guideVersion` it
   returns. If a write is refused for a stale version, call the guide again and
   re-read it before continuing.
 
@@ -28,6 +30,7 @@ tools. This guide is how to change them well.
 | `org_context_read` | One document as it stands now (draft included) and its `baseBlobSha` | read |
 | `org_context_edit` / `org_context_edit_batch` | Replace or append text in one document, or several in one go | write (draft) |
 | `org_context_add_procedure` | Create a new procedure for a task the agent doesn't cover yet | write (draft) |
+| `org_context_add_eval` | Add a test: an invented conversation and what the reply must do | write (draft) |
 | `org_context_setting_set` | Change a writable setting (name, emojis, languages, ...) | write (draft) |
 | `org_context_draft_get` | Everything changed and not yet live, as diffs, plus the review status | read |
 | `org_context_publish` | Send the draft for review; nothing is live until a person approves | write |
@@ -194,6 +197,32 @@ skill before changing a step, since steps often depend on the one before.
 "Teach it to do X" is almost always a new situation. Never tell the user
 something cannot be added; say which shape it takes and do it.
 
+## Add a test for every new skill or rule
+
+A test (eval) is an invented customer conversation plus the points the agent's
+reply must meet. Tests run automatically when the draft is sent for review, and a
+failing one blocks the change, so a test is what keeps a rule working after the
+next edit. **Write one with `org_context_add_eval` for every procedure you add,
+and for every rule you add or change.** A new procedure without a test will not
+be approved.
+
+- **Invent the conversation.** Never paste a real one, and never use a real name,
+  phone or email: tests live in the agent's repository and run on every change.
+  The tool refuses anything that looks like a phone or email
+  (`looks_like_personal_data`).
+- **Test the behavior, not the wording.** Each `expected` item is one point a
+  reviewer can check: "offers an exchange", "asks for the order number", "does
+  NOT promise a refund". Include the thing it must NOT do when that is the point
+  of the rule.
+- **Name the procedure** in `skill` when the test covers one.
+- **One situation per test**, one to three turns. Add a second test for the edge
+  case (the customer insists, the order is late) rather than a longer one.
+- Tests are create-only. If one is wrong, write a corrected one with a new id and
+  say which one it replaces in `purpose`; Boom removes the old one.
+- You can read the tests you add in `org_context_draft_get`. Existing tests are
+  listed by file name in `org_context_list` but can't be read, since they may come
+  from real conversations.
+
 ## Diagnose before you change: "why did it say that?"
 
 Several layers can produce a behavior, and a change in the wrong one does nothing.
@@ -298,6 +327,9 @@ account question, and never promise follow-up you cannot perform.
 | `path_not_editable` | Boom maintains that document. Say so; stop. |
 | `applies_when_required` / `delivery_cannot_apply_every_turn` | Declare `appliesWhen`, or move an every-turn rule to an injected document. |
 | `procedure_exists` | Edit the existing procedure instead. |
+| `eval_exists` | That test id is taken. Pick another id. |
+| `looks_like_personal_data` | Replace the phone or email with an invented one, or remove it. |
+| `skill_not_found` | Check the procedure id with `org_context_list`. |
 | `empty_draft` | Nothing to publish. |
 | `draft_changed` | The draft moved; call `org_context_draft_get` again. |
 | `draft_has_other_authors` | Someone else also changed this draft. Don't discard here; the user can review and discard it in Agent Studio. |
