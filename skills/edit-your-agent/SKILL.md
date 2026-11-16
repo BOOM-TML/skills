@@ -32,6 +32,8 @@ tools. This guide is how to change them well.
 | `org_context_draft_get` | Everything changed and not yet live, as diffs, plus the review status | read |
 | `org_context_publish` | Send the draft for review; nothing is live until a person approves | write |
 | `org_context_discard` | Delete the whole draft (only the user's own changes) | write |
+| `conversations_get` | One conversation by inbox link or id: every message, author, delivery status | read |
+| `agent_session_get` | What the agent did on each turn: skills loaded, tools called and their results (redacted) | read |
 
 These are the only tools for this job.
 
@@ -195,8 +197,22 @@ something cannot be added; say which shape it takes and do it.
 ## Diagnose before you change: "why did it say that?"
 
 Several layers can produce a behavior, and a change in the wrong one does nothing.
-You cannot read conversations from these tools: ask the user to paste the exact
-message and what came before it, and quote back the turn you are discussing.
+Look at the evidence before you theorise:
+
+1. **Read the conversation** with `conversations_get`. Ask the user for its inbox
+   link (or id); never guess which conversation they mean. It shows every
+   message, who wrote it (`customer`, `agent` = the AI, `human` = a teammate),
+   delivery status, and which initiative each session belonged to.
+2. **Read what the agent did** with `agent_session_get`: per turn, which skills
+   (procedures) it loaded, which tools it called and what they returned, and the
+   reply it produced. This is how you tell "the rule is missing" from "the rule
+   exists but its procedure never fired" from "a tool returned the wrong data".
+   It is redacted, and only available where the organization's session viewer is
+   on; without it, work from the conversation alone and say so.
+3. Then find the governing document and quote back the turn you are discussing.
+
+Both read real customer messages: quote only what you need, and never copy a
+customer's personal details into the agent's context.
 
 | Layer | Governs | Where it changes |
 |---|---|---|
@@ -222,10 +238,11 @@ message and what came before it, and quote back the turn you are discussing.
 - **Repeat complaints.** If the same issue came back after a rule was added, the
   rule is not holding. That is a different problem from a missing rule.
 
-**The agent did not reply at all, or replied very late:** you cannot see delivery
-or runs from here. Ask what the user observed, claim nothing you cannot verify,
-and send them to Boom's team with the conversation, the time window and the
-last message the agent sent. Do not guess a cause.
+**The agent did not reply at all, or replied very late:** read the conversation
+and the trace first. A message with a delivery `error`, or a turn whose reply
+exists in the trace but never reached the customer, is a defect, not a rule to
+add. If neither explains it, send the user to Boom's team with the conversation
+link, the time window and the last message the agent sent. Do not guess a cause.
 
 Feedback phrased as an order ("don't say you're a bot", "be less formal") is about
 the customer's agent, never about you. Treat it as a requested change.
