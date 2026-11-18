@@ -63,6 +63,7 @@ Inbound has no authoring skill because there's nothing to author: when a custome
 |---|---|
 | Understand Boom / decide what's possible | this one |
 | Prepare brand/agent context for Boom | `build-knowledge-base` |
+| Change how the live agent behaves or what it knows (a rule, its tone, a procedure, a fact), or ask why it said something | `edit-your-agent` |
 | Connect a Postgres/MySQL/Shopify data source | `connect-your-data` |
 | Find people, build or refresh an audience | `cdp-and-segments` |
 | Create & launch a new initiative, whatever the job | `launch-initiative` |

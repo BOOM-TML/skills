@@ -87,6 +87,7 @@ Either way, Claude selects the right skill from its `description` — typing the
 | [`boom-overview`](skills/boom-overview/SKILL.md) | Get oriented: Boom's object model, lifecycle, and which skill to use when |
 | [`onboarding`](skills/onboarding/SKILL.md) | Brand new to Boom? A guided, hands-on first run — build your first journey, send a Hello World, and learn the mental model |
 | [`build-knowledge-base`](skills/build-knowledge-base/SKILL.md) | Prepare the context your agent works from: durable brand identity, plus a brief per job. Guided interview + research on your own site. |
+| [`edit-your-agent`](skills/edit-your-agent/SKILL.md) | Change what your live agent knows and how it behaves (persona, tone, rules, procedures, knowledge) through `org_context_*`, one confirmed change at a time, then send it for review. Not enabled for every organization yet; ask Boom. |
 | [`connect-your-data`](skills/connect-your-data/SKILL.md) | Sync your Postgres/MySQL/Shopify data into Boom's CDP (read-only user, SSH tunnel, mapping SQL) |
 | [`cdp-and-segments`](skills/cdp-and-segments/SKILL.md) | Query Boom's CDP and build segments to target |
 | [`launch-initiative`](skills/launch-initiative/SKILL.md) | Create and launch any initiative end-to-end, with the context-authoring formula from Boom's best performers |

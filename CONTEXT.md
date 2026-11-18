@@ -15,7 +15,9 @@ Boom is multi-tenant infrastructure for AI conversations with customers. One cen
 - **Template** — a pre-approved WhatsApp message used to open conversations. Templates send from WhatsApp numbers you select via `phoneNumbers[]` (omit = the org's first active number). Discover numbers with `whatsapp_numbers_list`.
 - **Extraction schema** — the typed fields an initiative pulls out of its conversations (yes/no, number, choice, free text). This is how a conversation becomes structured data you can export or segment on, and it works for any kind of conversation, not just research. Read and set it per initiative with `extraction_schema_get` / `extraction_schema_set`.
 
-Two things a customer sees that live outside this API: the **shared inbox**, where a person takes over a conversation the agent escalated, and the **knowledge base** that briefs the agent. Point people at the Boom app for both instead of inventing tools for them.
+- **Agent context** — the documents the central agent runs on (persona, voice and tone, policies, glossary, knowledge, procedures, channels, skills). Changed with the `org_context_*` tools through a draft that goes live only after a person approves it (see `edit-your-agent`). Enabled per organization.
+
+Two things a customer sees that live outside this API: the **shared inbox**, where a person takes over a conversation the agent escalated, and building a **knowledge base** from scratch (`build-knowledge-base` prepares one for Boom to load). Point people at the Boom app for both instead of inventing tools for them.
 
 ## Vocabulary rules
 
