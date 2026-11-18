@@ -146,6 +146,16 @@ documento `skill_listed` no aplicó en un turno en el que esa skill nunca se act
   abrirlo y se queda con lo que ya cree. Escribe también la corrección, en una línea, en
   un documento con `delivery` `injected` (normalmente una política). Después revisa
   cada lugar que repite el dato viejo, incluidos los ejemplos de lo que no debe decir.
+- **Una regla nueva que contradice una general debe decir que gana.** El agente
+  sigue la regla general salvo que la nueva nombre la excepción. Una regla para
+  "STOP" como primer mensaje seguía recibiendo un saludo hasta que dijo: "esto NO
+  es un saludo, aunque sea el primer mensaje; no saludes, aplica X". Busca la regla
+  general que anula y nómbrala.
+- **Los ejemplos de respuesta se copian casi palabra por palabra.** El agente manda
+  un ejemplo casi tal cual, así que cada ejemplo debe cumplir todas las prohibiciones
+  que lo rodean. Un acuse de ejemplo que prometía "no te volveremos a escribir"
+  rompía la regla de al lado ("nunca prometas que nadie escribirá"). Escribe
+  ejemplos que digan menos de lo que la regla permite.
 
 **Varios fragmentos para una solicitud:** usa `org_context_edit_batch` con las ediciones en
 orden. Las ediciones posteriores se buscan sobre el resultado de las anteriores, y el conjunto se aplica
@@ -220,6 +230,10 @@ revisores esperan una prueba con cada procedimiento nuevo.
 - **Nombra el procedimiento** en `skill` cuando la prueba cubra uno.
 - **Una situación por prueba**, de uno a tres turnos. Agrega una segunda prueba para el caso
   límite (el cliente insiste, el pedido viene retrasado) en vez de una más larga.
+- **El título debe pasar las revisiones del agente:** máximo 60 caracteres, en el
+  idioma de la prueba, empieza con mayúscula, sin punto final y sin diagonales,
+  guiones bajos ni nombres de archivo. Debe decir más que el id. Un título que no
+  pasa se rechaza (`invalid_title`, con el motivo).
 - Las pruebas solo se crean. Si una está mal, escribe una corregida con un id nuevo y
   di en `purpose` cuál reemplaza, y dile al usuario que le pida al revisor que
   elimine la anterior.
@@ -349,11 +363,13 @@ pregunta de cuenta, y nunca prometas un seguimiento que no puedes hacer.
 | `context_changed` | Alguien editó el documento. Vuelve a leer, rehaz el cambio sobre el texto nuevo y vuelve a confirmar si difiere. Nunca reintentes con el texto y la versión anteriores. |
 | `context_quote_from_published` / `context_has_unpublished_changes` | Tu cita es de una versión anterior. Vuelve a leer con `org_context_read` y cita de esa lectura. |
 | `anchor_in_frontmatter` | Ese texto es un ajuste. Usa `org_context_setting_set` si es editable; si no, es fijo. |
+| `import_lines_locked` | Una línea que empieza con `@` en el glosario carga otro documento del glosario y no se puede cambiar. Edita los términos alrededor, o el documento al que apunta. |
 | `path_not_editable` | Boom mantiene ese documento. Dilo; detente. |
 | `applies_when_required` / `delivery_cannot_apply_every_turn` | Declara `appliesWhen`, o mueve una regla de cada turno a un documento inyectado. |
 | `procedure_exists` | Edita el procedimiento existente en su lugar. |
 | `eval_exists` | Ese id de prueba ya está ocupado. Elige otro id. |
 | `looks_like_personal_data` | El mensaje indica el campo y el texto. Quítalo o cámbialo por un valor inventado y corto; no reenvíes sin cambios. |
+| `invalid_title` | El mensaje dice qué revisión no pasa el título. Reescribe el título; el resto de la prueba puede quedar igual. |
 | `skill_not_found` | Verifica el id del procedimiento con `org_context_list`. |
 | `empty_draft` | No hay nada que publicar. |
 | `draft_changed` | El borrador cambió; vuelve a llamar a `org_context_draft_get`. |

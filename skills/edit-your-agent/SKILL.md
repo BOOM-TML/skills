@@ -154,6 +154,16 @@ it. When the agent "ignored" a rule, check `delivery` first. A rule in a
   state the correction, in one line, in a document whose `delivery` is
   `injected` (usually a policy). Then check every other place that repeats the
   old fact, including examples of what not to say.
+- **A new rule that contradicts a general one must say it wins.** The agent
+  follows the general rule unless the new one names the exception. A rule for
+  "STOP" as a first message still got a greeting until it said: "this is NOT a
+  greeting, even as the first message; don't greet, apply X instead". Find the
+  general rule it overrides and name it.
+- **Example replies are copied almost word for word.** The agent sends an example
+  nearly as written, so every example must obey every prohibition around it. An
+  example acknowledgement that promised "we won't write again" broke the rule
+  next to it ("never promise no one will write"). Write examples that say less
+  than the rule allows.
 
 **Several spans for one request:** use `org_context_edit_batch` with the edits in
 order. Later edits match against the result of earlier ones, and the set applies
@@ -227,6 +237,10 @@ change.** Reviewers expect a test with every new procedure.
 - **Name the procedure** in `skill` when the test covers one.
 - **One situation per test**, one to three turns. Add a second test for the edge
   case (the customer insists, the order is late) rather than a longer one.
+- **The title must pass the agent's review checks:** at most 60 characters, in
+  the test's language, starting with a capital, no final period, and no slashes,
+  underscores or file names. It must say more than the id. A title that fails is
+  refused (`invalid_title`, with the reason).
 - Tests are create-only. If one is wrong, write a corrected one with a new id and
   say which one it replaces in `purpose`, and tell the user to ask the reviewer
   to remove the old one.
@@ -356,11 +370,13 @@ account question, and never promise follow-up you cannot perform.
 | `context_changed` | Someone edited the document. Re-read, rebuild the change on the new text, re-confirm if it differs. Never retry with the old text and version. |
 | `context_quote_from_published` / `context_has_unpublished_changes` | Your quote is from an older version. Re-read with `org_context_read` and quote from that. |
 | `anchor_in_frontmatter` | That text is a setting. Use `org_context_setting_set` if writable; otherwise it is fixed. |
+| `import_lines_locked` | A line starting with `@` in the glossary loads another glossary document and cannot be changed. Edit the terms around it, or the document it points to. |
 | `path_not_editable` | Boom maintains that document. Say so; stop. |
 | `applies_when_required` / `delivery_cannot_apply_every_turn` | Declare `appliesWhen`, or move an every-turn rule to an injected document. |
 | `procedure_exists` | Edit the existing procedure instead. |
 | `eval_exists` | That test id is taken. Pick another id. |
 | `looks_like_personal_data` | The message names the field and the text. Remove it or replace it with a short invented value; don't resend unchanged. |
+| `invalid_title` | The message says which check the title fails. Rewrite the title; the rest of the test can stay. |
 | `skill_not_found` | Check the procedure id with `org_context_list`. |
 | `empty_draft` | Nothing to publish. |
 | `draft_changed` | The draft moved; call `org_context_draft_get` again. |
