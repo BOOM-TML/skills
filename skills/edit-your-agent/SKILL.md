@@ -29,14 +29,14 @@ En español: [es.md](./es.md), or `org_context_guide` with `language: "es"`.
 | `org_context_list` | Every document, whether it is editable, and when it reaches the agent | read |
 | `org_context_read` | One document as it stands now (draft included) and its `baseBlobSha` | read |
 | `org_context_edit` / `org_context_edit_batch` | Replace or append text in one document, or several in one go | write (draft) |
-| `org_context_add_procedure` | Create a new procedure for a task the agent doesn't cover yet | write (draft) |
+| `org_context_add_procedure` | Create a new procedure for a situation the agent doesn't handle yet | write (draft) |
 | `org_context_add_eval` | Add a test: an invented conversation and what the reply must do | write (draft) |
-| `org_context_setting_set` | Change a writable setting (name, emojis, languages, ...) | write (draft) |
+| `org_context_setting_set` | Change a writable setting (agent name, display name, primary language, formality, ...) | write (draft) |
 | `org_context_draft_get` | Everything changed and not yet live, as diffs, plus the review status | read |
 | `org_context_publish` | Send the draft for review; nothing is live until a person approves | write |
 | `org_context_discard` | Delete the whole draft (only the user's own changes) | write |
 | `conversations_get` | One conversation by inbox link or id: every message, author, delivery status | read |
-| `agent_session_get` | What the agent did on each turn: skills loaded, tools called and their results (redacted) | read |
+| `agent_session_get` | What the agent did on each turn: its reasoning, the Boom and organization tools it called and their results, its reply (redacted) | read |
 
 These are the only tools for this job.
 
@@ -146,6 +146,14 @@ it. When the agent "ignored" a rule, check `delivery` first. A rule in a
 - **Write rules the agent can act on.** "Check whether the order shipped before
   offering a refund" is a rule; "be helpful about refunds" changes nothing. Say
   when it applies, and name what it must not do; exclusions are the most reliable fixes.
+- **A correction to something the agent says by default goes in an every-turn
+  document too.** When the agent stated a wrong fact, price, option or method
+  (a payment method that no longer exists, an old schedule), fixing only the
+  knowledge document or procedure it came from is not enough: the agent often
+  answers without opening it, and falls back on what it already believes. Also
+  state the correction, in one line, in a document whose `delivery` is
+  `injected` (usually a policy). Then check every other place that repeats the
+  old fact, including examples of what not to say.
 
 **Several spans for one request:** use `org_context_edit_batch` with the edits in
 order. Later edits match against the result of earlier ones, and the set applies
@@ -200,16 +208,18 @@ something cannot be added; say which shape it takes and do it.
 ## Add a test for every new skill or rule
 
 A test (eval) is an invented customer conversation plus the points the agent's
-reply must meet. Tests run automatically when the draft is sent for review, and a
-failing one blocks the change, so a test is what keeps a rule working after the
-next edit. **Write one with `org_context_add_eval` for every procedure you add,
-and for every rule you add or change.** A new procedure without a test will not
-be approved.
+reply must meet. When the draft is sent for review, the agent's tests run against
+it and the reviewer sees the results before approving, so a test is what makes a
+rule that stops working visible after the next edit. **Write one with
+`org_context_add_eval` for every procedure you add, and for every rule you add or
+change.** Reviewers expect a test with every new procedure.
 
 - **Invent the conversation.** Never paste a real one, and never use a real name,
   phone or email: tests live in the agent's repository and run on every change.
   The tool refuses anything that looks like a phone or email
-  (`looks_like_personal_data`).
+  (`looks_like_personal_data`, naming the field and the text). Long digit runs
+  count, so prefer relative dates ("hace 3 días") and short invented order
+  numbers.
 - **Test the behavior, not the wording.** Each `expected` item is one point a
   reviewer can check: "offers an exchange", "asks for the order number", "does
   NOT promise a refund". Include the thing it must NOT do when that is the point
@@ -218,7 +228,8 @@ be approved.
 - **One situation per test**, one to three turns. Add a second test for the edge
   case (the customer insists, the order is late) rather than a longer one.
 - Tests are create-only. If one is wrong, write a corrected one with a new id and
-  say which one it replaces in `purpose`; Boom removes the old one.
+  say which one it replaces in `purpose`, and tell the user to ask the reviewer
+  to remove the old one.
 - You can read the tests you add in `org_context_draft_get`. Existing tests are
   listed by file name in `org_context_list` but can't be read, since they may come
   from real conversations.
@@ -232,12 +243,21 @@ Look at the evidence before you theorise:
    link (or id); never guess which conversation they mean. It shows every
    message, who wrote it (`customer`, `agent` = the AI, `human` = a teammate),
    delivery status, and which initiative each session belonged to.
-2. **Read what the agent did** with `agent_session_get`: per turn, which skills
-   (procedures) it loaded, which tools it called and what they returned, and the
-   reply it produced. This is how you tell "the rule is missing" from "the rule
-   exists but its procedure never fired" from "a tool returned the wrong data".
-   It is redacted, and only available where the organization's session viewer is
-   on; without it, work from the conversation alone and say so.
+2. **Read what the agent did** with `agent_session_get`: per turn, its reasoning,
+   which Boom and organization tools it called and what they returned, and the
+   reply it produced. Loading a procedure shows only as a step name, so infer
+   whether a procedure fired from the reasoning and the steps it took. When the
+   agent opens one of the organization's own documents (a knowledge document, a
+   procedure), the step shows which one (`file_path`), but not its content. Read
+   that document with `org_context_read` to see what it relied on. Documents
+   read on every turn (persona, voice, policies, glossary, channels) never show
+   as a step: they are always in front of the agent.
+   This is how you tell "the rule is missing" from "the rule exists but its
+   procedure never fired" from "a tool returned the wrong data". It is redacted,
+   not anonymised: customer messages and tool results appear as they are. It is
+   only available where the organization's session viewer is on
+   (`agent_session_unavailable` otherwise); then work from the conversation alone
+   and say so.
 3. Then find the governing document and quote back the turn you are discussing.
 
 Both read real customer messages: quote only what you need, and never copy a
@@ -270,7 +290,13 @@ customer's personal details into the agent's context.
 **The agent did not reply at all, or replied very late:** read the conversation
 and the trace first. A message with a delivery `error`, or a turn whose reply
 exists in the trace but never reached the customer, is a defect, not a rule to
-add. If neither explains it, send the user to Boom's team with the conversation
+add, except on email: there the agent only drafts and a teammate approves, so a
+missing email reply may be a draft waiting in the inbox (or one a teammate
+dismissed). Check the channel from `conversations_get` and ask the user to look
+in the inbox before calling it a defect. Before concluding a step or reply is
+missing at all, check `unreadableEntries`, `messagesTruncated` and
+`deliveryUnknown` in the trace: if any is set, the trace is incomplete. If none
+of this explains it, send the user to Boom's team with the conversation
 link, the time window and the last message the agent sent. Do not guess a cause.
 
 Feedback phrased as an order ("don't say you're a bot", "be less formal") is about
@@ -308,6 +334,12 @@ account question, and never promise follow-up you cannot perform.
   changes for the user. Publish only when they ask.
 - `org_context_publish` opens or refreshes one review. More edits after publishing
   join the same review; publish again to include them.
+- After publishing, the organization's automatic checks run on the draft. A
+  few minutes later, `org_context_draft_get` reports them in `contentEvals`:
+  `passed`, `failed` with the scenarios that failed, or `pending` while they
+  run. Before telling the user the change is ready for approval, check it. If it
+  `failed`, say which scenarios failed and whether they relate to this change;
+  the reviewer will see the same result.
 - Testing: there is no tester over these tools. Once approved and live, suggest
   the user check it in Agent Studio's tester or with a real test conversation.
 - `org_context_discard` deletes the **whole** draft and closes its review. Cannot
@@ -328,13 +360,15 @@ account question, and never promise follow-up you cannot perform.
 | `applies_when_required` / `delivery_cannot_apply_every_turn` | Declare `appliesWhen`, or move an every-turn rule to an injected document. |
 | `procedure_exists` | Edit the existing procedure instead. |
 | `eval_exists` | That test id is taken. Pick another id. |
-| `looks_like_personal_data` | Replace the phone or email with an invented one, or remove it. |
+| `looks_like_personal_data` | The message names the field and the text. Remove it or replace it with a short invented value; don't resend unchanged. |
 | `skill_not_found` | Check the procedure id with `org_context_list`. |
 | `empty_draft` | Nothing to publish. |
 | `draft_changed` | The draft moved; call `org_context_draft_get` again. |
 | `draft_has_other_authors` | Someone else also changed this draft. Don't discard here; the user can review and discard it in Agent Studio. |
 | `guide_required` / `guide_outdated` | Call `org_context_guide`, re-read it, retry with the new `guideVersion`. |
 | `context_surface_unavailable` | Editing the agent isn't enabled for this organization yet. Tell the user to ask Boom; don't retry. |
+| `agent_session_unavailable` | The agent's trace isn't on for this organization. Work from `conversations_get` and say so. |
+| `conversation_not_found` / `unrecognized_reference` | Ask the user for the conversation's inbox link. |
 
 ## Talking to the user
 

@@ -22,14 +22,14 @@ Esta guía explica cómo cambiarlos bien.
 | `org_context_list` | Todos los documentos, si son editables y cuándo llegan al agente | lectura |
 | `org_context_read` | Un documento tal como está ahora (borrador incluido) y su `baseBlobSha` | lectura |
 | `org_context_edit` / `org_context_edit_batch` | Reemplazar o agregar texto en un documento, o en varios de una vez | escritura (borrador) |
-| `org_context_add_procedure` | Crear un procedimiento nuevo para una tarea que el agente todavía no cubre | escritura (borrador) |
+| `org_context_add_procedure` | Crear un procedimiento nuevo para una situación que el agente todavía no atiende | escritura (borrador) |
 | `org_context_add_eval` | Agregar una prueba (eval): una conversación inventada y lo que la respuesta debe hacer | escritura (borrador) |
-| `org_context_setting_set` | Cambiar un ajuste editable (nombre, emojis, idiomas, ...) | escritura (borrador) |
+| `org_context_setting_set` | Cambiar un ajuste editable (nombre del agente, nombre visible, idioma principal, formalidad, ...) | escritura (borrador) |
 | `org_context_draft_get` | Todo lo cambiado que aún no está en vivo, como diffs, más el estado de la revisión | lectura |
 | `org_context_publish` | Enviar el borrador a revisión; nada queda en vivo hasta que una persona lo aprueba | escritura |
 | `org_context_discard` | Borrar todo el borrador (solo los cambios del propio usuario) | escritura |
 | `conversations_get` | Una conversación por enlace del inbox o id: cada mensaje, autor, estado de entrega | lectura |
-| `agent_session_get` | Lo que hizo el agente en cada turno: habilidades (skills) cargadas, herramientas llamadas y sus resultados (con datos personales ocultos) | lectura |
+| `agent_session_get` | Lo que hizo el agente en cada turno: su razonamiento, las herramientas de Boom y de la organización que llamó y sus resultados, su respuesta (sin las partes internas) | lectura |
 
 Estas son las únicas herramientas para este trabajo.
 
@@ -139,6 +139,13 @@ documento `skill_listed` no aplicó en un turno en el que esa skill nunca se act
 - **Escribe reglas que el agente pueda ejecutar.** "Revisa si el pedido ya se envió antes
   de ofrecer un reembolso" es una regla; "sé útil con los reembolsos" no cambia nada. Di
   cuándo aplica y nombra lo que no debe hacer; las exclusiones son los arreglos más confiables.
+- **Una corrección a algo que el agente dice por defecto va también en un documento de
+  cada turno.** Si el agente dio un dato, precio, opción o método equivocado (una forma
+  de pago que ya no existe, un horario viejo), no basta con corregir el documento de
+  conocimiento o el procedimiento de donde salió: el agente muchas veces contesta sin
+  abrirlo y se queda con lo que ya cree. Escribe también la corrección, en una línea, en
+  un documento con `delivery` `injected` (normalmente una política). Después revisa
+  cada lugar que repite el dato viejo, incluidos los ejemplos de lo que no debe decir.
 
 **Varios fragmentos para una solicitud:** usa `org_context_edit_batch` con las ediciones en
 orden. Las ediciones posteriores se buscan sobre el resultado de las anteriores, y el conjunto se aplica
@@ -193,16 +200,19 @@ que algo no se puede agregar; di qué forma toma y hazlo.
 ## Agrega una prueba por cada skill o regla nueva
 
 Una prueba es una conversación de cliente inventada más los puntos que la
-respuesta del agente debe cumplir. Las pruebas corren automáticamente cuando el borrador se envía a revisión, y una
-que falla bloquea el cambio, así que una prueba es lo que mantiene funcionando una regla después de la
-siguiente edición. **Escribe una con `org_context_add_eval` por cada procedimiento que agregues,
-y por cada regla que agregues o cambies.** Un procedimiento nuevo sin prueba no
-será aprobado.
+respuesta del agente debe cumplir. Cuando el borrador se envía a revisión, las
+pruebas del agente corren contra él y el revisor ve los resultados antes de
+aprobar, así que una prueba es lo que hace visible una regla que deja de funcionar
+después de la siguiente edición. **Escribe una con `org_context_add_eval` por cada
+procedimiento que agregues, y por cada regla que agregues o cambies.** Los
+revisores esperan una prueba con cada procedimiento nuevo.
 
 - **Inventa la conversación.** Nunca pegues una real y nunca uses un nombre,
   teléfono o correo real: las pruebas viven en el repositorio del agente y corren en cada cambio.
   La herramienta rechaza cualquier cosa que parezca un teléfono o un correo
-  (`looks_like_personal_data`).
+  (`looks_like_personal_data`, indicando el campo y el texto). Las series largas de
+  dígitos cuentan, así que prefiere fechas relativas ("hace 3 días") y números de
+  pedido inventados y cortos.
 - **Prueba el comportamiento, no la redacción.** Cada elemento de `expected` es un punto que un
   revisor puede verificar: "ofrece un cambio", "pide el número de pedido", "NO
   promete un reembolso". Incluye lo que NO debe hacer cuando ese es el punto
@@ -211,7 +221,8 @@ será aprobado.
 - **Una situación por prueba**, de uno a tres turnos. Agrega una segunda prueba para el caso
   límite (el cliente insiste, el pedido viene retrasado) en vez de una más larga.
 - Las pruebas solo se crean. Si una está mal, escribe una corregida con un id nuevo y
-  di en `purpose` cuál reemplaza; Boom elimina la anterior.
+  di en `purpose` cuál reemplaza, y dile al usuario que le pida al revisor que
+  elimine la anterior.
 - Puedes leer las pruebas que agregues en `org_context_draft_get`. Las pruebas existentes se
   listan por nombre de archivo en `org_context_list` pero no se pueden leer, ya que pueden venir
   de conversaciones reales.
@@ -225,12 +236,21 @@ Revisa la evidencia antes de teorizar:
    inbox (o el id); nunca adivines a qué conversación se refiere. Muestra cada
    mensaje, quién lo escribió (`customer`, `agent` = la IA, `human` = un compañero de equipo),
    el estado de entrega y a qué iniciativa pertenecía cada sesión.
-2. **Lee lo que hizo el agente** con `agent_session_get`: por turno, qué skills
-   (procedimientos) cargó, qué herramientas llamó y qué devolvieron, y la
-   respuesta que produjo. Así distingues entre "falta la regla", "la regla
-   existe pero su procedimiento nunca se activó" y "una herramienta devolvió datos equivocados".
-   Oculta los datos personales, y solo está disponible donde el visor de sesiones de la organización está
-   activado; sin él, trabaja solo con la conversación y dilo.
+2. **Lee lo que hizo el agente** con `agent_session_get`: por turno, su
+   razonamiento, qué herramientas de Boom y de la organización llamó y qué
+   devolvieron, y la respuesta que produjo. Cargar un procedimiento aparece solo
+   como el nombre del paso, así que deduce si se activó a partir del razonamiento
+   y de los pasos que siguió. Cuando el agente abre uno de los documentos de la
+   organización (un documento de conocimiento, un procedimiento), el paso muestra
+   cuál (`file_path`), pero no su contenido: léelo con `org_context_read` para ver
+   en qué se basó. Los documentos que lee en cada turno (persona, voz, políticas,
+   glosario, canales) nunca aparecen como paso: siempre los tiene enfrente. Así distingues entre "falta la regla",
+   "la regla existe pero su procedimiento nunca se activó" y "una herramienta
+   devolvió datos equivocados". Omite las partes internas, pero no anonimiza: los
+   mensajes del cliente y los resultados de las herramientas aparecen tal cual. Solo está
+   disponible donde el visor de sesiones de la organización está activado
+   (`agent_session_unavailable` si no); entonces trabaja solo con la conversación
+   y dilo.
 3. Luego encuentra el documento que rige y cita el turno del que estás hablando.
 
 Ambas leen mensajes reales de clientes: cita solo lo que necesites y nunca copies los
@@ -263,7 +283,13 @@ datos personales de un cliente en el contexto del agente.
 **El agente no respondió en absoluto, o respondió muy tarde:** lee primero la conversación
 y la traza. Un mensaje con `error` de entrega, o un turno cuya respuesta
 existe en la traza pero nunca llegó al cliente, es un defecto, no una regla que
-agregar. Si ninguno lo explica, manda al usuario con el equipo de Boom con el enlace de la
+agregar, salvo en email: ahí el agente solo redacta un borrador y un compañero lo
+aprueba, así que una respuesta de email que falta puede ser un borrador esperando
+en el inbox (o uno que un compañero descartó). Revisa el canal con
+`conversations_get` y pídele al usuario que mire el inbox antes de llamarlo
+defecto. Antes de concluir que falta un paso o una respuesta, revisa
+`unreadableEntries`, `messagesTruncated` y `deliveryUnknown` en la traza: si
+alguno está activo, la traza está incompleta. Si nada de esto lo explica, manda al usuario con el equipo de Boom con el enlace de la
 conversación, la ventana de tiempo y el último mensaje que envió el agente. No adivines una causa.
 
 La retroalimentación formulada como orden ("no digas que eres un bot", "sé menos formal") es sobre
@@ -277,7 +303,7 @@ nada, y nada le avisa a nadie.
 
 Estas herramientas todavía no pueden hacer esa parte: aquí no se pueden subir archivos, y el id del asset
 no se muestra en el panel de Boom. Pide al usuario que guarde el archivo en el panel
-(Settings › Assets, disponible para toda la organización y compartible con
+(Configuración › Archivos, disponible para toda la organización y compartible con
 clientes), y luego que le pida al chat de Agent Studio "comparte <nombre del archivo> cuando los clientes pregunten
 por <tema>". Studio puede encontrar el archivo guardado por nombre y escribe la regla con
 el id correcto. No escribas un enlace `asset:` con un id adivinado o inventado.
@@ -301,6 +327,12 @@ pregunta de cuenta, y nunca prometas un seguimiento que no puedes hacer.
   para el usuario. Publica solo cuando lo pida.
 - `org_context_publish` abre o actualiza una sola revisión. Las ediciones posteriores a la publicación
   se suman a la misma revisión; publica de nuevo para incluirlas.
+- Al publicar, las pruebas automáticas de la organización corren sobre el borrador.
+  Unos minutos después, `org_context_draft_get` las reporta en `contentEvals`:
+  `passed`, `failed` con los escenarios que fallaron, o `pending` mientras corren.
+  Antes de decirle al usuario que el cambio está listo para aprobarse, revísalo. Si
+  quedó en `failed`, di qué escenarios fallaron y si tienen que ver con este cambio;
+  quien revisa verá el mismo resultado.
 - Pruebas manuales: no hay probador en estas herramientas. Una vez aprobado y en vivo, sugiere
   al usuario revisarlo en el probador de Agent Studio o con una conversación de prueba real.
 - `org_context_discard` borra **todo** el borrador y cierra su revisión. No se puede
@@ -321,13 +353,15 @@ pregunta de cuenta, y nunca prometas un seguimiento que no puedes hacer.
 | `applies_when_required` / `delivery_cannot_apply_every_turn` | Declara `appliesWhen`, o mueve una regla de cada turno a un documento inyectado. |
 | `procedure_exists` | Edita el procedimiento existente en su lugar. |
 | `eval_exists` | Ese id de prueba ya está ocupado. Elige otro id. |
-| `looks_like_personal_data` | Reemplaza el teléfono o el correo por uno inventado, o elimínalo. |
+| `looks_like_personal_data` | El mensaje indica el campo y el texto. Quítalo o cámbialo por un valor inventado y corto; no reenvíes sin cambios. |
 | `skill_not_found` | Verifica el id del procedimiento con `org_context_list`. |
 | `empty_draft` | No hay nada que publicar. |
 | `draft_changed` | El borrador cambió; vuelve a llamar a `org_context_draft_get`. |
 | `draft_has_other_authors` | Alguien más también cambió este borrador. No lo descartes aquí; el usuario puede revisarlo y descartarlo en Agent Studio. |
 | `guide_required` / `guide_outdated` | Llama a `org_context_guide`, reléela y reintenta con el nuevo `guideVersion`. |
 | `context_surface_unavailable` | La edición del agente todavía no está habilitada para esta organización. Dile al usuario que se lo pida a Boom; no reintentes. |
+| `agent_session_unavailable` | El registro del agente no está activado para esta organización. Trabaja con `conversations_get` y dilo. |
+| `conversation_not_found` / `unrecognized_reference` | Pide al usuario el enlace de la conversación en el inbox. |
 
 ## Cómo hablarle al usuario
 
