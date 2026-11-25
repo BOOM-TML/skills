@@ -46,14 +46,25 @@ Pages already open keep working for an hour after a publish. Visitors get a new 
 | Part | Keys |
 |---|---|
 | Identity | `slug` (snake_case; names the event `<slug>_submitted` and the person attributes `<slug>_<key>`), optional `eventName` — both **frozen at the first publish** |
-| Questions | `steps[]` (`id`, `title`, `fieldIds`) and `fields[]`: `id`, `key` (snake_case, frozen once published), `type` (`short_text`, `long_text`, `email`, `phone`, `number`, `single_choice`, `multi_choice`, `dropdown`, `scale`, `statement`), `label`, `help`, `placeholder`, `required`, `sensitive`, `options[]` (`id`, `value` — what is stored, frozen — `label`, `score`), `scale` (`min`, `max`, labels), `scored`, `mapsTo` (`email`, `phone`, `firstName`, `lastName`), `saveToProfile`, `profileKey` |
-| Results | `scoring.enabled`, `endings[]` (`id`, `key` — the stored result — `title`, `body`, `buttonLabel`/`buttonUrl`, `redirectUrl`, `scoreMin`/`scoreMax`). Exactly one ending has no range: it shows when no range matches. Ranges may not overlap |
+| Questions | `steps[]` (`id`, `title`, `fieldIds`, `routes`, `otherwise` — see *Routing*) and `fields[]`: `id`, `key` (snake_case, frozen once published), `type` (`short_text`, `long_text`, `email`, `phone`, `number`, `single_choice`, `multi_choice`, `dropdown`, `scale`, `statement`), `label`, `help`, `placeholder`, `required`, `sensitive`, `options[]` (`id`, `value` — what is stored, frozen — `label`, `score`), `scale` (`min`, `max`, labels), `scored`, `mapsTo` (`email`, `phone`, `firstName`, `lastName`), `saveToProfile`, `profileKey` |
+| Results | `scoring.enabled`, `endings[]` (`id`, `key` — the stored result — `title`, `body`, `buttonLabel`/`buttonUrl`, `redirectUrl`, `scoreMin`/`scoreMax`). Without routes, exactly one ending has no range: it shows when no range matches. With routes, an ending a route targets needs no range, and one unranged ending no route targets catches visitors no route sends anywhere. Ranges may not overlap |
 | Extra data | `hidden[]` (`key`, `from`: `query` or `data`) — carried from the page's address or the container's `data-*`; `utm_*` are kept automatically. `constants[]` (`key`, `value`) — fixed values on every event, e.g. a webinar date |
 | Consent | `consent.marketingText` (required when a phone is asked: the WhatsApp opt-in box), `consent.processingText` + `consent.privacyNoticeUrl` (required on a sensitive form), `consent.termsUrl` |
 | Design | `look` (one of `paper`, `graphite`, `sand`, `forest`, `ocean`, `plum`, `mono`, `brand`: colours, font and shape in one choice; `brand` is tinted with `accentColor`), `accentColor`, `presentation` (overrides: `font`, `radius`, `answerStyle` `outline`/`filled`, `align`, `questionSize`, `stageHeight`, `backgroundImageUrl` + `backgroundDim`, `transparent`), `style` colour overrides (`background`, `textColor`, `headingColor`, `buttonTextColor`) and `buttonShape`, `width` (`narrow`, `medium`, `full`), `logoUrl`, `copy` (button words), `welcome` (optional first screen: `enabled`, `title`, `body`, `buttonLabel`) |
 | Other | `retentionDays`, `enrollmentsPerHour` (journey enrollments per hour, default 50, at most 500; responses past it are saved but not enrolled), `analytics.dataLayer`, `defaultCountry`, `hosted` (below) |
 
-Publishing rules: at least one question; a **required** email or phone question that `mapsTo` the person; option values and keys valid and unique; every live question in exactly one step; endings as above.
+Publishing rules: at least one question; a **required** email or phone question that `mapsTo` the person; option values and keys valid and unique; every live question in exactly one step; endings as above; routes as below.
+
+## Routing
+
+An answer can choose where the visitor goes next: a **later** step, or an ending. Use it to qualify leads inside the form (e.g. 10+ brands → a qualification step → "book a call"; 1–9 → a "Starter" ending that redirects; none → a free guide).
+
+- `steps[].routes[]`: `{ "id", "when", "to" }`. `when` is `{ "fieldId", "optionIds": [...] }` for `single_choice`, `dropdown` or `multi_choice` (any picked option matches), or `{ "fieldId", "min", "max" }` (inclusive; `null` = open) for `number` or `scale`. `to` is `{ "stepId" }` or `{ "endingId" }`. The question must be on that same step. First matching route wins.
+- `steps[].otherwise`: where the step goes when no route matches (`{ "stepId" }`, `{ "endingId" }` or `null` = the next step).
+- To send someone to another page, route them to an ending with a `redirectUrl`.
+- Publishing refuses: a route to an earlier step or one that doesn't exist, overlapping ranges, an answer routed twice, a step or ending no answer leads to, and **any path that reaches an ending before a required email or phone question** (put contact first, or before the routing).
+- The server re-checks the path: answers from steps the visitor didn't reach are dropped, and `required` applies only to steps on their path. The event's `ending` is the ending the route reached.
+- `update` keeps a step's `routes`/`otherwise` when you send that step without them; send `routes: []` / `otherwise: null` to clear.
 
 **What freezes once published:** keys, question types, option values, where an answer lands (`saveToProfile`, `profileKey`, `mapsTo`), sensitive marks, the slug and the event name. Labels stay editable. A question removed from the draft becomes *retired* (its key stays). To "rename" a key, add a new question.
 
