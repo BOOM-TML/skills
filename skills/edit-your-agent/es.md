@@ -379,7 +379,7 @@ a través de otro objeto, pon en `path` la ruta, salto por salto desde la person
 | Journeys | las herramientas `journeys_*`. Un disparador por segmento (`journeys_set_trigger`) recibe el `id` del segmento, tal como lo devuelven `segments_create`, `segments_get` o `segments_list`, no su slug |
 | Campañas | las herramientas `initiatives_*` |
 | Segmentos, audiencias | las herramientas `segments_*` (ver arriba) |
-| El objetivo, las preguntas, el tono o la respuesta de identidad de una iniciativa | panel de Boom |
+| El objetivo, el contexto, las preguntas, la condición de marcado o la respuesta de identidad de una iniciativa | `initiatives_update`, incluso ya lanzada. `context` y `objective` reemplazan el valor completo: léelo primero y envíalo de vuelta con el cambio. Una iniciativa no tiene tono propio; el tono del agente está en su contexto de agente, que se edita con estas herramientas |
 | Plantillas de WhatsApp o de correo, conexiones de canales | panel de Boom |
 | Un mensaje roto, una respuesta que falta, una herramienta que falló | el equipo de Boom, con la conversación |
 | Precios, contratos, acceso a la cuenta, preguntas de API | el equipo de Boom |

@@ -383,7 +383,7 @@ through another object, set `path` to the route, hop by hop from the person:
 | Journeys | The `journeys_*` tools. A segment trigger (`journeys_set_trigger`) takes the segment's `id`, as `segments_create`, `segments_get` or `segments_list` return it, not its slug |
 | Campaigns | The `initiatives_*` tools |
 | Segments, audiences | The `segments_*` tools (see above) |
-| An initiative's objective, questions, tone or identity answer | Boom dashboard |
+| An initiative's objective, context, questions, flag condition or identity answer | `initiatives_update`, even once launched. `context` and `objective` replace the whole value: read it first and send it back with the change. An initiative has no tone of its own; the agent's tone is in its agent context, edited with these tools |
 | WhatsApp or email templates, channel connections | Boom dashboard |
 | A broken message, missing reply, failed tool | Boom's team, with the conversation |
 | Pricing, contracts, account access, API questions | Boom's team |
