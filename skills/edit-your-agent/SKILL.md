@@ -32,10 +32,13 @@ En español: [es.md](./es.md), or `org_context_guide` with `language: "es"`.
 | `org_context_add_procedure` | Create a new procedure for a situation the agent doesn't handle yet | write (draft) |
 | `org_context_add_eval` | Add a test: an invented conversation and what the reply must do | write (draft) |
 | `org_context_setting_set` | Change a writable setting (agent name, display name, primary language, formality, ...) | write (draft) |
-| `org_context_draft_get` | Everything changed and not yet live, as diffs, plus the review status | read |
-| `org_context_publish` | Send the draft for review; nothing is live until a person approves | write |
+| `org_context_draft_get` | Everything changed and not yet live, as diffs, plus the review status (or, when promoting is on, its `validation`) | read |
+| `org_context_publish` | Send the draft for review, or for validation when promoting is on; nothing is live yet | write |
+| `org_context_promote` | Put validated changes live (only when promoting is on for the organization); the user confirms it in their client | write |
 | `org_context_discard` | Delete the whole draft (only the user's own changes) | write |
 | `conversations_get` | One conversation by inbox link or id: every message, author, delivery status | read |
+| `conversations_list` | Find inbox conversations on any channel by date, channel, label, initiative or text; one row each with a preview | read |
+| `conversations_transcripts_list` | Transcripts of many conversations at once (the most recent N messages per conversation, default 100, up to 400; `truncated: true` marks a cut thread), same filters as `conversations_list` | read |
 | `agent_session_get` | What the agent did on each turn: its reasoning, the Boom and organization tools it called and their results, its reply (redacted) | read |
 
 These are the only tools for this job.
@@ -52,11 +55,14 @@ the moment you call it. So the confirmation step is yours:
 3. Then call the write tool. **One change per confirmation.** Three unrelated
    requests are three confirmations.
 
-**Nothing is live until a person approves it.** Writes land in a draft.
-`org_context_publish` sends the draft for review; a reviewer must approve it before
-customers see it. After publishing, say "sent for review, waiting for approval",
-never "it's live". `org_context_draft_get` reports the status: `draft`,
-`pending_review`, `publishing`, `live` or `not_deployed`.
+**Nothing is live until it is approved or promoted.** Writes land in a draft.
+`org_context_publish` sends the draft on; what happens next depends on the
+organization (see *Publishing and discarding*). By default a Boom reviewer must
+approve it before customers see it: after publishing, say "sent for review,
+waiting for approval", never "it's live". When promoting is on, the organization
+puts validated changes live itself with `org_context_promote`. Either way
+`org_context_draft_get` reports the status: `draft`, `pending_review`,
+`publishing`, `live` or `not_deployed`.
 
 ## The areas
 
@@ -154,6 +160,16 @@ it. When the agent "ignored" a rule, check `delivery` first. A rule in a
   state the correction, in one line, in a document whose `delivery` is
   `injected` (usually a policy). Then check every other place that repeats the
   old fact, including examples of what not to say.
+- **A new rule that contradicts a general one must say it wins.** The agent
+  follows the general rule unless the new one names the exception. A rule for
+  "STOP" as a first message still got a greeting until it said: "this is NOT a
+  greeting, even as the first message; don't greet, apply X instead". Find the
+  general rule it overrides and name it.
+- **Example replies are copied almost word for word.** The agent sends an example
+  nearly as written, so every example must obey every prohibition around it. An
+  example acknowledgement that promised "we won't write again" broke the rule
+  next to it ("never promise no one will write"). Write examples that say less
+  than the rule allows.
 
 **Several spans for one request:** use `org_context_edit_batch` with the edits in
 order. Later edits match against the result of earlier ones, and the set applies
@@ -227,12 +243,32 @@ change.** Reviewers expect a test with every new procedure.
 - **Name the procedure** in `skill` when the test covers one.
 - **One situation per test**, one to three turns. Add a second test for the edge
   case (the customer insists, the order is late) rather than a longer one.
+- **The title must pass the agent's review checks:** at most 60 characters, in
+  the test's language, starting with a capital, no final period, and no slashes,
+  underscores or file names. It must say more than the id. A title that fails is
+  refused (`invalid_title`, with the reason).
 - Tests are create-only. If one is wrong, write a corrected one with a new id and
-  say which one it replaces in `purpose`, and tell the user to ask the reviewer
-  to remove the old one.
+  say in `purpose` which one it replaces, by what it checked (its title or the
+  old rule), never by its file name or path (`invalid_purpose`). Tell the user to ask the
+  reviewer to remove the old one.
 - You can read the tests you add in `org_context_draft_get`. Existing tests are
   listed by file name in `org_context_list` but can't be read, since they may come
   from real conversations.
+
+## Reading many conversations
+
+To look for a pattern, find with `conversations_list`, then read with
+`conversations_transcripts_list` using the same filters (it returns the most recent
+`messagesPerConversation` messages per conversation, default 100, up to 400, and
+`truncated: true` marks a cut thread; a page at a time, follow `next_cursor`). Pages of one walk share an
+`asOf`; conversations with activity after it are not in the walk, so call again
+with `activeAfter` set to that `asOf` to catch them. If `searchTruncated` is
+true, the text search kept only its newest matches: narrow with
+`activeFrom`/`activeTo`, which bounds that cap to the window. With dates set, `q`
+matches message text only inside them (names, phones and labels as usual).
+Text search is refused while customer names or contact details are hidden.
+The `initiativeId` filter matches a conversation's current session (as the inbox
+does); for every conversation a campaign touched, use `initiatives_transcripts_list`.
 
 ## Diagnose before you change: "why did it say that?"
 
@@ -315,11 +351,37 @@ customers), then ask Agent Studio's chat to "share <file name> when customers as
 about <topic>". Studio can find the saved file by name and writes the rule with
 the right id. Don't write an `asset:` link with a guessed or made-up id.
 
+## Segments: routes to related data
+
+Segments are built entirely with the `segments_*` tools; nothing needs the Boom
+dashboard. One thing to get right: a `has_relationship` condition without `path`
+matches only objects linked to the person directly. When the data is reached
+through another object, set `path` to the route, hop by hop from the person:
+
+```json
+{ "kind": "has_relationship", "customObjectType": "onboarding", "attributeFilters": [],
+  "path": [
+    { "customObjectType": "buyer", "relationshipType": "buyer_user_of", "attributeFilters": [] },
+    { "customObjectType": "onboarding", "direction": "parent_to_child",
+      "relationshipType": "buyer_has_onboarding", "attributeFilters": [] } ] }
+```
+
+- Copy routes from `reachableObjects` in `segments_catalog`, which lists every
+  route to each type. Don't guess one.
+- Data columns take the same shape, in `outputColumns.customObjects[].path`.
+- When `segments_create`, `segments_update` or `segments_validate` returns a
+  `warnings` entry saying a condition will match nobody, set its `path` to one of
+  the routes it names, with `segments_update`. Don't tell the user to finish it
+  in the dashboard.
+- A deleted segment keeps its slug. Fix a segment in place instead of deleting
+  and re-creating it.
+
 ## Out of scope
 
 | Request | Where it goes |
 |---|---|
-| Campaigns, journeys, segments, audiences | Boom dashboard |
+| Campaigns, journeys | Boom dashboard |
+| Segments, audiences | The `segments_*` tools (see above) |
 | An initiative's objective, questions, tone or identity answer | Boom dashboard |
 | WhatsApp or email templates, channel connections | Boom dashboard |
 | A broken message, missing reply, failed tool | Boom's team, with the conversation |
@@ -329,6 +391,11 @@ Say where it belongs in one line. Never write a rule to satisfy a defect or an
 account question, and never promise follow-up you cannot perform.
 
 ## Publishing and discarding
+
+Two modes. Which one applies is visible in `org_context_publish`'s answer: it
+returns a review link (`reviewUrl`) by default, or `status: "validating"` with a
+`version` when promoting is on. When unsure, call `org_context_draft_get`: it
+includes `validation` only when promoting is on.
 
 - Before publishing, call `org_context_draft_get` and summarise the pending
   changes for the user. Publish only when they ask.
@@ -342,10 +409,45 @@ account question, and never promise follow-up you cannot perform.
   the reviewer will see the same result.
 - Testing: there is no tester over these tools. Once approved and live, suggest
   the user check it in Agent Studio's tester or with a real test conversation.
-- `org_context_discard` deletes the **whole** draft and closes its review. Cannot
+- `org_context_discard` deletes the **whole** draft and closes its review or validation. Cannot
   be undone. Call it only when the user explicitly asks, with `expectedHeadSha`
   from `org_context_draft_get`. It is refused if anyone else contributed
   (`draft_has_other_authors`); those drafts are discarded from Agent Studio.
+
+### When promoting is on for the organization
+
+The organization, not a Boom reviewer, decides when a change goes live. Do not
+mention a reviewer or approval in this mode.
+
+1. Edit as usual, then `org_context_draft_get` and summarise the changes.
+2. When the user asks to publish, call `org_context_publish`. It answers
+   `status: "validating"` and a `version`; nothing is live. Say "validating", not "sent for review".
+3. Call `org_context_draft_get` again after a minute or two and read
+   `validation.state`: `validating` (wait and look again), `needs_fixes`
+   (`validation.failing` names what failed: say which, fix the draft, publish again)
+   or `ready`. A `validation` of null means it can't be read right now: do not promote.
+4. When it is `ready`, tell the user exactly what will go live and get an explicit
+   yes. Then call `org_context_promote` with `validation.version`; the user also
+   confirms the call in their client. It answers `promoting` with the files going
+   live and who last changed each (or `already_promoted` on a retry). `ready` can
+   still be refused if the live agent changed the same documents since: publish
+   again and wait for `ready` (see the table below).
+5. Say it plainly: **to promote a change means to put it live for real customers**
+   (it has nothing to do with the store's promotions, such as offers in a
+   `knowledge/promotions.md` document, which are just content). New conversations
+   get the change right away; conversations already in progress may keep the old
+   behavior for up to about 2 days. `org_context_draft_get` reads `publishing`
+   while it goes live, then `live`.
+
+The organization owns what it promotes: nobody at Boom reviews it first, so the
+summary and the user's yes in step 4 are the only review. Tests are not required
+to promote, but an organization with no tests has nothing catching a rule that
+later stops working: suggest adding one with `org_context_add_eval` (a new
+procedure needs one that names it, or promote is refused).
+
+If publishing answers `needs_fixes` with a `message`, the live agent changed the
+same documents since this draft began and it can't be brought up to date:
+discard the draft and redo the edits, or contact Boom. Relay the message; don't retry.
 
 ## When a write is refused
 
@@ -356,14 +458,27 @@ account question, and never promise follow-up you cannot perform.
 | `context_changed` | Someone edited the document. Re-read, rebuild the change on the new text, re-confirm if it differs. Never retry with the old text and version. |
 | `context_quote_from_published` / `context_has_unpublished_changes` | Your quote is from an older version. Re-read with `org_context_read` and quote from that. |
 | `anchor_in_frontmatter` | That text is a setting. Use `org_context_setting_set` if writable; otherwise it is fixed. |
+| `import_lines_locked` | A line starting with `@` loads another document into the agent. You can't add, remove or change one. Edit the text around it, or the document it points to. To add a procedure, use `org_context_add_procedure`; its body can't contain one either. |
 | `path_not_editable` | Boom maintains that document. Say so; stop. |
 | `applies_when_required` / `delivery_cannot_apply_every_turn` | Declare `appliesWhen`, or move an every-turn rule to an injected document. |
 | `procedure_exists` | Edit the existing procedure instead. |
 | `eval_exists` | That test id is taken. Pick another id. |
 | `looks_like_personal_data` | The message names the field and the text. Remove it or replace it with a short invented value; don't resend unchanged. |
+| `invalid_title` | The message says which check the title fails. Rewrite the title; the rest of the test can stay. |
+| `invalid_purpose` | The `purpose` names a file. The person approving reads it, so describe the rule or situation the test protects in plain words. |
 | `skill_not_found` | Check the procedure id with `org_context_list`. |
 | `empty_draft` | Nothing to publish. |
 | `draft_changed` | The draft moved; call `org_context_draft_get` again. |
+| `promote_disabled` | Promoting isn't on for this organization. Use the review flow (`org_context_publish`, then wait for approval). |
+| `version_changed` / `behind_live` | The draft or the live agent moved after validation. Publish again, wait for `ready`, promote the new `version`. |
+| `validation_pending` / `validation_failed` | Still validating: look again shortly. Failed: say which part failed, fix the draft, publish again. |
+| `procedure_without_test` | A new procedure needs a test that names it: add one with `org_context_add_eval`, publish, promote. |
+| `outside_editable_paths` / `foreign_history` / `content_not_allowed` | The change includes something only Boom can put live, and Boom has been told. Say so; don't retry or work around it. |
+| `too_large` | Too big to put live in one step. Contact Boom. |
+| `promote_in_progress` | Another promote is running for this organization. Look again in a minute. |
+| `nothing_published` | Nothing has been published to promote. |
+| `promote_unavailable` / `promote_failed` | Promoting is unavailable right now and Boom has been alerted. Don't retry in a loop; tell the user. |
+| `not_allowed` | Only a signed-in person can promote. |
 | `draft_has_other_authors` | Someone else also changed this draft. Don't discard here; the user can review and discard it in Agent Studio. |
 | `guide_required` / `guide_outdated` | Call `org_context_guide`, re-read it, retry with the new `guideVersion`. |
 | `context_surface_unavailable` | Editing the agent isn't enabled for this organization yet. Tell the user to ask Boom; don't retry. |

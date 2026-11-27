@@ -30,6 +30,25 @@ description: Use when the user wants to query Boom's customer data platform (per
 3. **Save it** (`segments_create`) only once the filter is agreed. Segments are shared org-wide, so name them descriptively (`churned-premium-2026-q2`, not `test-3`). Creating never evaluates: it comes back with `memberCount: 0` no matter how many people actually match. Set `evaluationCadence` explicitly, the API default is `REACTIVE_ONLY` (re-evaluates only the people a CDP write touches, plus a daily backstop sweep), so a filter that turns true from the calendar alone, like "no payment in 30 days," can sit stale for a day with no new data to trigger it. Use `HOURLY` or `DAILY` for anything time-based. `segments_evaluate` forces a refresh now; it runs **synchronously** over MCP, unlike the dashboard's background button, so on a large org it can hold the request open a while. Skip it and let the cadence run if you don't need membership refreshed immediately.
 4. **Use it**: a journey whose entry is segment-triggered enrolls members automatically (see `design-journey`), but wiring that trigger is an **app-only step today**: `journeys_set_trigger` needs the segment's internal id, and this surface only exposes `slug`, so setting a segment trigger over MCP fails `not_found`. Do that part in the Boom app. For a one-shot batch instead, page members with `segments_members_list` and pass them to `initiatives_participants_add` (see `manage-participants` for row shape and DNC behavior).
 
+## Related objects: routes
+
+Building, fixing and evaluating a segment is all done with the `segments_*` tools; none of it needs a dashboard step. Never tell the user the MCP can't set a route and to finish the segment in the app.
+
+A `has_relationship` condition **without `path`** matches only objects linked to the person **directly**. When the object hangs off another object (person → `account` → `subscription`, say), the condition needs a `path`: the route hop by hop from the person, last hop being the object itself.
+
+```json
+{ "kind": "has_relationship", "customObjectType": "subscription", "attributeFilters": [],
+  "path": [
+    { "customObjectType": "account", "relationshipType": "account_member", "attributeFilters": [] },
+    { "customObjectType": "subscription", "direction": "parent_to_child",
+      "relationshipType": "account_has_subscription", "attributeFilters": [] } ] }
+```
+
+- **Copy the route** from `segments_catalog` → `reachableObjects`, which lists every route to each object type. Don't guess relationship names or directions.
+- **Data columns** take the same shape: `outputColumns.customObjects[].path`.
+- **Heed the warning.** When `segments_create`, `segments_update` or `segments_validate` returns a `warnings` entry saying a condition will match nobody, set that condition's `path` to one of the routes the warning names.
+- **Fix in place** with `segments_update`. Don't delete and re-create: a deleted segment keeps its slug, so the new one can't reuse it.
+
 ## Boom best practices
 
 - **Journeys can read a custom object, not just segment on it.** A journey's *Look up record* step loads one record (by an id the event carries, or along the person's relationships) and its later messages use the fields, e.g. a merchant's logo and colors for white-label email. So per-merchant data belongs in a custom object type (`merchant_brand`), not copied onto every person. See `design-journey`.
@@ -44,6 +63,7 @@ description: Use when the user wants to query Boom's customer data platform (per
 |---|---|---|
 | `error.code: "not_found"` on an attribute filter | Attribute doesn't exist in this org | Re-run `segments_catalog`; ask the user |
 | Segment saved but empty | Never evaluated, or time-based filter awaiting its cadence | `segments_evaluate`, then `segments_members_list` |
+| A condition on a related object matches 0 people (or a `warnings` entry says it will) | `has_relationship` without `path`, but the object is linked through another object | Add a `path` from `segments_catalog` → `reachableObjects`, with `segments_update` |
 | Segment count ≠ participants added later | DNC suppression at enroll time | Expected — see `manage-participants` |
 
 See [`CONTEXT.md`](../../CONTEXT.md) for the domain model.
