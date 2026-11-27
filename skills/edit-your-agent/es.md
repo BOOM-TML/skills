@@ -376,7 +376,8 @@ a través de otro objeto, pon en `path` la ruta, salto por salto desde la person
 
 | Solicitud | A dónde va |
 |---|---|
-| Campañas, journeys | panel de Boom |
+| Journeys | las herramientas `journeys_*`. Un disparador por segmento (`journeys_set_trigger`) recibe el `id` del segmento, tal como lo devuelven `segments_create`, `segments_get` o `segments_list`, no su slug |
+| Campañas | las herramientas `initiatives_*` |
 | Segmentos, audiencias | las herramientas `segments_*` (ver arriba) |
 | El objetivo, las preguntas, el tono o la respuesta de identidad de una iniciativa | panel de Boom |
 | Plantillas de WhatsApp o de correo, conexiones de canales | panel de Boom |

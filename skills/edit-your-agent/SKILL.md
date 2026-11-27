@@ -380,7 +380,8 @@ through another object, set `path` to the route, hop by hop from the person:
 
 | Request | Where it goes |
 |---|---|
-| Campaigns, journeys | Boom dashboard |
+| Journeys | The `journeys_*` tools. A segment trigger (`journeys_set_trigger`) takes the segment's `id`, as `segments_create`, `segments_get` or `segments_list` return it, not its slug |
+| Campaigns | The `initiatives_*` tools |
 | Segments, audiences | The `segments_*` tools (see above) |
 | An initiative's objective, questions, tone or identity answer | Boom dashboard |
 | WhatsApp or email templates, channel connections | Boom dashboard |
