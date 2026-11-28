@@ -25,10 +25,13 @@ Esta guía explica cómo cambiarlos bien.
 | `org_context_add_procedure` | Crear un procedimiento nuevo para una situación que el agente todavía no atiende | escritura (borrador) |
 | `org_context_add_eval` | Agregar una prueba (eval): una conversación inventada y lo que la respuesta debe hacer | escritura (borrador) |
 | `org_context_setting_set` | Cambiar un ajuste editable (nombre del agente, nombre visible, idioma principal, formalidad, ...) | escritura (borrador) |
-| `org_context_draft_get` | Todo lo cambiado que aún no está en vivo, como diffs, más el estado de la revisión | lectura |
-| `org_context_publish` | Enviar el borrador a revisión; nada queda en vivo hasta que una persona lo aprueba | escritura |
+| `org_context_draft_get` | Todo lo cambiado que aún no está en vivo, como diffs, más el estado de la revisión (o, cuando promover está activo, su `validation`) | lectura |
+| `org_context_publish` | Enviar el borrador a revisión, o a validación cuando promover está activo; todavía nada queda en vivo | escritura |
+| `org_context_promote` | Poner en vivo los cambios validados (solo cuando promover está activo para la organización); el usuario lo confirma en su cliente | escritura |
 | `org_context_discard` | Borrar todo el borrador (solo los cambios del propio usuario) | escritura |
 | `conversations_get` | Una conversación por enlace del inbox o id: cada mensaje, autor, estado de entrega | lectura |
+| `conversations_list` | Encontrar conversaciones del inbox en cualquier canal por fecha, canal, etiqueta, iniciativa o texto; una fila por conversación con vista previa | lectura |
+| `conversations_transcripts_list` | Transcripciones de muchas conversaciones a la vez (los N mensajes más recientes de cada una, 100 por defecto y hasta 400; `truncated: true` marca un hilo recortado), con los mismos filtros que `conversations_list` | lectura |
 | `agent_session_get` | Lo que hizo el agente en cada turno: su razonamiento, las herramientas de Boom y de la organización que llamó y sus resultados, su respuesta (sin las partes internas) | lectura |
 
 Estas son las únicas herramientas para este trabajo.
@@ -45,11 +48,14 @@ en el momento en que la llamas. Así que el paso de confirmación te toca a ti:
 3. Luego llama a la herramienta de escritura. **Un cambio por confirmación.** Tres
    solicitudes no relacionadas son tres confirmaciones.
 
-**Nada queda en vivo hasta que una persona lo aprueba.** Las escrituras caen en un borrador.
-`org_context_publish` envía el borrador a revisión; un revisor debe aprobarlo antes de
-que los clientes lo vean. Después de publicar, di "enviado a revisión, en espera de aprobación",
-nunca "ya está en vivo". `org_context_draft_get` reporta el estado: `draft`,
-`pending_review`, `publishing`, `live` o `not_deployed`.
+**Nada queda en vivo hasta que se aprueba o se promueve.** Las escrituras caen en un borrador.
+`org_context_publish` envía el borrador; lo que sigue depende de la organización
+(ver *Publicar y descartar*). Por defecto un revisor de Boom debe aprobarlo antes de
+que los clientes lo vean: después de publicar, di "enviado a revisión, en espera de
+aprobación", nunca "ya está en vivo". Cuando promover está activo, la organización
+pone en vivo los cambios validados con `org_context_promote`. En ambos casos
+`org_context_draft_get` reporta el estado: `draft`, `pending_review`, `publishing`,
+`live` o `not_deployed`.
 
 ## Las áreas
 
@@ -146,6 +152,16 @@ documento `skill_listed` no aplicó en un turno en el que esa skill nunca se act
   abrirlo y se queda con lo que ya cree. Escribe también la corrección, en una línea, en
   un documento con `delivery` `injected` (normalmente una política). Después revisa
   cada lugar que repite el dato viejo, incluidos los ejemplos de lo que no debe decir.
+- **Una regla nueva que contradice una general debe decir que gana.** El agente
+  sigue la regla general salvo que la nueva nombre la excepción. Una regla para
+  "STOP" como primer mensaje seguía recibiendo un saludo hasta que dijo: "esto NO
+  es un saludo, aunque sea el primer mensaje; no saludes, aplica X". Busca la regla
+  general que anula y nómbrala.
+- **Los ejemplos de respuesta se copian casi palabra por palabra.** El agente manda
+  un ejemplo casi tal cual, así que cada ejemplo debe cumplir todas las prohibiciones
+  que lo rodean. Un acuse de ejemplo que prometía "no te volveremos a escribir"
+  rompía la regla de al lado ("nunca prometas que nadie escribirá"). Escribe
+  ejemplos que digan menos de lo que la regla permite.
 
 **Varios fragmentos para una solicitud:** usa `org_context_edit_batch` con las ediciones en
 orden. Las ediciones posteriores se buscan sobre el resultado de las anteriores, y el conjunto se aplica
@@ -220,12 +236,35 @@ revisores esperan una prueba con cada procedimiento nuevo.
 - **Nombra el procedimiento** en `skill` cuando la prueba cubra uno.
 - **Una situación por prueba**, de uno a tres turnos. Agrega una segunda prueba para el caso
   límite (el cliente insiste, el pedido viene retrasado) en vez de una más larga.
+- **El título debe pasar las revisiones del agente:** máximo 60 caracteres, en el
+  idioma de la prueba, empieza con mayúscula, sin punto final y sin diagonales,
+  guiones bajos ni nombres de archivo. Debe decir más que el id. Un título que no
+  pasa se rechaza (`invalid_title`, con el motivo).
 - Las pruebas solo se crean. Si una está mal, escribe una corregida con un id nuevo y
-  di en `purpose` cuál reemplaza, y dile al usuario que le pida al revisor que
-  elimine la anterior.
+  di en `purpose` cuál reemplaza, por lo que revisaba (su título o la regla
+  anterior), nunca por su nombre de archivo ni su ruta (`invalid_purpose`). Dile al usuario
+  que le pida al revisor que elimine la anterior.
 - Puedes leer las pruebas que agregues en `org_context_draft_get`. Las pruebas existentes se
   listan por nombre de archivo en `org_context_list` pero no se pueden leer, ya que pueden venir
   de conversaciones reales.
+
+## Leer muchas conversaciones
+
+Para buscar un patrón, encuentra con `conversations_list` y lee con
+`conversations_transcripts_list` usando los mismos filtros (devuelve los
+`messagesPerConversation` mensajes más recientes de cada conversación, 100 por
+defecto y hasta 400, y `truncated: true` marca un hilo recortado; una página a la
+vez, sigue `next_cursor`). Las páginas
+de un mismo recorrido comparten un `asOf`; las conversaciones con actividad
+posterior no entran, así que vuelve a llamar con `activeAfter` igual a ese
+`asOf` para alcanzarlas. Si `searchTruncated` es true, la búsqueda de texto se quedó
+solo con sus coincidencias más recientes: acota con `activeFrom`/`activeTo`, que
+también limita ese tope a esas fechas. Con fechas, `q` busca en el texto de los
+mensajes solo dentro de ese rango (nombres, teléfonos y etiquetas, igual que siempre). La búsqueda de texto se rechaza
+mientras los nombres o datos de contacto de los clientes estén ocultos.
+El filtro `initiativeId` coincide con la sesión actual de la conversación (igual que
+la bandeja); para todas las conversaciones que tocó una campaña, usa
+`initiatives_transcripts_list`.
 
 ## Diagnostica antes de cambiar: "¿por qué dijo eso?"
 
@@ -258,8 +297,8 @@ datos personales de un cliente en el contexto del agente.
 
 | Capa | Qué rige | Dónde se cambia |
 |---|---|---|
-| La campaña / el journey | qué mensaje salió y cuándo; mensajes de plantilla | panel de Boom |
-| La iniciativa | su objetivo, preguntas guía, tono para esa campaña y su propia respuesta sobre si es un bot | panel de Boom |
+| La campaña / el journey | qué mensaje salió y cuándo; mensajes de plantilla | las herramientas `journeys_*` e `initiatives_*` |
+| La iniciativa | su objetivo, contexto, preguntas guía y su propia respuesta sobre si es un bot | `initiatives_update` |
 | El contexto del agente | todo lo de la tabla de áreas | estas herramientas |
 | Un defecto | un mensaje cortado o deformado, un envío vacío o duplicado, una herramienta que falló | no es instrucción de nadie; repórtalo a Boom |
 
@@ -308,13 +347,41 @@ clientes), y luego que le pida al chat de Agent Studio "comparte <nombre del arc
 por <tema>". Studio puede encontrar el archivo guardado por nombre y escribe la regla con
 el id correcto. No escribas un enlace `asset:` con un id adivinado o inventado.
 
+## Segmentos: rutas a datos relacionados
+
+Los segmentos se arman por completo con las herramientas `segments_*`; nada requiere
+el panel de Boom. Una cosa que hay que hacer bien: una condición `has_relationship` sin `path`
+solo coincide con objetos vinculados directamente a la persona. Cuando el dato se alcanza
+a través de otro objeto, pon en `path` la ruta, salto por salto desde la persona:
+
+```json
+{ "kind": "has_relationship", "customObjectType": "onboarding", "attributeFilters": [],
+  "path": [
+    { "customObjectType": "buyer", "relationshipType": "buyer_user_of", "attributeFilters": [] },
+    { "customObjectType": "onboarding", "direction": "parent_to_child",
+      "relationshipType": "buyer_has_onboarding", "attributeFilters": [] } ] }
+```
+
+- Copia las rutas de `reachableObjects` en `segments_catalog`, que lista todas las
+  rutas a cada tipo. No adivines una.
+- Las columnas de datos usan la misma forma, en `outputColumns.customObjects[].path`.
+- Cuando `segments_create`, `segments_update` o `segments_validate` devuelve una entrada en
+  `warnings` que dice que una condición no coincidirá con nadie, pon en su `path` una de
+  las rutas que nombra, con `segments_update`. No le digas al usuario que lo termine
+  en el panel.
+- Un segmento eliminado o desactivado conserva su slug. Corrige el segmento en su lugar en vez de
+  eliminarlo y crearlo de nuevo.
+
 ## Fuera de alcance
 
 | Solicitud | A dónde va |
 |---|---|
-| Campañas, journeys, segmentos, audiencias | panel de Boom |
-| El objetivo, las preguntas, el tono o la respuesta de identidad de una iniciativa | panel de Boom |
-| Plantillas de WhatsApp o de correo, conexiones de canales | panel de Boom |
+| Journeys | las herramientas `journeys_*`. Un disparador por segmento (`journeys_set_trigger`) recibe el `id` del segmento, tal como lo devuelven `segments_create`, `segments_get` o `segments_list`, no su slug |
+| Campañas | las herramientas `initiatives_*` |
+| Segmentos, audiencias | las herramientas `segments_*` (ver arriba) |
+| El objetivo, el contexto, las preguntas, la condición de marcado o la respuesta de identidad de una iniciativa | `initiatives_update`, incluso ya lanzada. `context` y `objective` reemplazan el valor completo: léelo primero y envíalo de vuelta con el cambio. Una iniciativa no tiene tono propio; el tono del agente está en su contexto de agente, que se edita con estas herramientas |
+| Plantillas de WhatsApp o de correo | las herramientas `templates_*` (WhatsApp) y `email_templates_*` |
+| Conexiones de canales | panel de Boom |
 | Un mensaje roto, una respuesta que falta, una herramienta que falló | el equipo de Boom, con la conversación |
 | Precios, contratos, acceso a la cuenta, preguntas de API | el equipo de Boom |
 
@@ -322,6 +389,11 @@ Di a dónde pertenece en una línea. Nunca escribas una regla para resolver un d
 pregunta de cuenta, y nunca prometas un seguimiento que no puedes hacer.
 
 ## Publicar y descartar
+
+Hay dos modos. La respuesta de `org_context_publish` muestra cuál aplica: devuelve un
+enlace de revisión (`reviewUrl`) por defecto, o `status: "validating"` con una
+`version` cuando promover está activo. Si dudas, llama a `org_context_draft_get`:
+incluye `validation` solo cuando promover está activo.
 
 - Antes de publicar, llama a `org_context_draft_get` y resume los cambios pendientes
   para el usuario. Publica solo cuando lo pida.
@@ -335,10 +407,45 @@ pregunta de cuenta, y nunca prometas un seguimiento que no puedes hacer.
   quien revisa verá el mismo resultado.
 - Pruebas manuales: no hay probador en estas herramientas. Una vez aprobado y en vivo, sugiere
   al usuario revisarlo en el probador de Agent Studio o con una conversación de prueba real.
-- `org_context_discard` borra **todo** el borrador y cierra su revisión. No se puede
+- `org_context_discard` borra **todo** el borrador y cierra su revisión o validación. No se puede
   deshacer. Llámala solo cuando el usuario lo pida explícitamente, con `expectedHeadSha`
   de `org_context_draft_get`. Se rechaza si alguien más contribuyó
   (`draft_has_other_authors`); esos borradores se descartan desde Agent Studio.
+
+### Cuando promover está activo para la organización
+
+La organización, no un revisor de Boom, decide cuándo un cambio sale en vivo. No
+menciones un revisor ni una aprobación en este modo.
+
+1. Edita como siempre, luego `org_context_draft_get` y resume los cambios.
+2. Cuando el usuario pida publicar, llama a `org_context_publish`. Responde
+   `status: "validating"` y una `version`; nada está en vivo. Di "validando", no "enviado a revisión".
+3. Llama otra vez a `org_context_draft_get` al cabo de uno o dos minutos y lee
+   `validation.state`: `validating` (espera y vuelve a mirar), `needs_fixes`
+   (`validation.failing` indica qué falló: dilo, corrige el borrador y publica de nuevo)
+   o `ready`. Un `validation` nulo significa que no se puede leer ahora: no promuevas.
+4. Cuando esté en `ready`, dile al usuario exactamente qué saldrá en vivo y obtén un sí
+   explícito. Luego llama a `org_context_promote` con `validation.version`; el usuario
+   también confirma la llamada en su cliente. Responde `promoting` con los archivos que
+   salen en vivo y quién cambió cada uno por última vez (o `already_promoted` en un reintento).
+   Un `ready` aún puede ser rechazado si el agente en vivo cambió los mismos documentos
+   desde entonces: publica de nuevo y espera `ready` (ver la tabla de abajo).
+5. Dilo con claridad: **promover un cambio significa ponerlo en vivo para clientes
+   reales** (no tiene que ver con las promociones de la tienda, como las ofertas de un
+   documento `knowledge/promotions.md`, que son solo contenido). Las conversaciones
+   nuevas reciben el cambio de inmediato; las que ya están en curso pueden conservar el
+   comportamiento anterior hasta unos 2 días. `org_context_draft_get` muestra `publishing`
+   mientras sale en vivo y luego `live`.
+
+La organización es dueña de lo que promueve: nadie en Boom lo revisa antes, así que el
+resumen y el sí del usuario en el paso 4 son la única revisión. Las pruebas no son
+obligatorias para promover, pero una organización sin pruebas no tiene nada que detecte
+una regla que deje de funcionar: sugiere agregar una con `org_context_add_eval` (un
+procedimiento nuevo necesita una que lo nombre, o se rechaza al promover).
+
+Si al publicar responde `needs_fixes` con un `message`, el agente en vivo cambió los
+mismos documentos desde que empezó este borrador y no se puede poner al día: descarta el
+borrador y rehaz las ediciones, o contacta a Boom. Transmite el mensaje; no reintentes.
 
 ## Cuando se rechaza una escritura
 
@@ -349,14 +456,27 @@ pregunta de cuenta, y nunca prometas un seguimiento que no puedes hacer.
 | `context_changed` | Alguien editó el documento. Vuelve a leer, rehaz el cambio sobre el texto nuevo y vuelve a confirmar si difiere. Nunca reintentes con el texto y la versión anteriores. |
 | `context_quote_from_published` / `context_has_unpublished_changes` | Tu cita es de una versión anterior. Vuelve a leer con `org_context_read` y cita de esa lectura. |
 | `anchor_in_frontmatter` | Ese texto es un ajuste. Usa `org_context_setting_set` si es editable; si no, es fijo. |
+| `import_lines_locked` | Una línea que empieza con `@` carga otro documento en el agente. No puedes agregar, quitar ni cambiar una. Edita el texto alrededor, o el documento al que apunta. Para agregar un procedimiento, usa `org_context_add_procedure`; su cuerpo tampoco puede tener una. |
 | `path_not_editable` | Boom mantiene ese documento. Dilo; detente. |
 | `applies_when_required` / `delivery_cannot_apply_every_turn` | Declara `appliesWhen`, o mueve una regla de cada turno a un documento inyectado. |
 | `procedure_exists` | Edita el procedimiento existente en su lugar. |
 | `eval_exists` | Ese id de prueba ya está ocupado. Elige otro id. |
 | `looks_like_personal_data` | El mensaje indica el campo y el texto. Quítalo o cámbialo por un valor inventado y corto; no reenvíes sin cambios. |
+| `invalid_title` | El mensaje dice qué revisión no pasa el título. Reescribe el título; el resto de la prueba puede quedar igual. |
+| `invalid_purpose` | El `purpose` menciona un archivo. Lo lee quien aprueba, así que describe en palabras simples la regla o situación que protege la prueba. |
 | `skill_not_found` | Verifica el id del procedimiento con `org_context_list`. |
 | `empty_draft` | No hay nada que publicar. |
 | `draft_changed` | El borrador cambió; vuelve a llamar a `org_context_draft_get`. |
+| `promote_disabled` | Promover no está activo para esta organización. Usa el flujo de revisión (`org_context_publish` y espera la aprobación). |
+| `version_changed` / `behind_live` | El borrador o el agente en vivo cambió después de la validación. Publica de nuevo, espera `ready` y promueve la nueva `version`. |
+| `validation_pending` / `validation_failed` | Aún validando: vuelve a mirar en breve. Falló: di qué parte falló, corrige el borrador y publica de nuevo. |
+| `procedure_without_test` | Un procedimiento nuevo necesita una prueba que lo nombre: agrega una con `org_context_add_eval`, publica y promueve. |
+| `outside_editable_paths` / `foreign_history` / `content_not_allowed` | El cambio incluye algo que solo Boom puede poner en vivo, y Boom ya fue avisado. Dilo; no reintentes ni lo esquives. |
+| `too_large` | Demasiado grande para ponerlo en vivo de una vez. Contacta a Boom. |
+| `promote_in_progress` | Hay otra promoción en curso para esta organización. Vuelve a mirar en un minuto. |
+| `nothing_published` | No hay nada publicado para promover. |
+| `promote_unavailable` / `promote_failed` | Promover no está disponible ahora y Boom ya fue alertado. No reintentes en bucle; díselo al usuario. |
+| `not_allowed` | Solo una persona con sesión iniciada puede promover. |
 | `draft_has_other_authors` | Alguien más también cambió este borrador. No lo descartes aquí; el usuario puede revisarlo y descartarlo en Agent Studio. |
 | `guide_required` / `guide_outdated` | Llama a `org_context_guide`, reléela y reintenta con el nuevo `guideVersion`. |
 | `context_surface_unavailable` | La edición del agente todavía no está habilitada para esta organización. Dile al usuario que se lo pida a Boom; no reintentes. |
