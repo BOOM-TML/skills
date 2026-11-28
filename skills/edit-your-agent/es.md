@@ -297,8 +297,8 @@ datos personales de un cliente en el contexto del agente.
 
 | Capa | Qué rige | Dónde se cambia |
 |---|---|---|
-| La campaña / el journey | qué mensaje salió y cuándo; mensajes de plantilla | panel de Boom |
-| La iniciativa | su objetivo, preguntas guía, tono para esa campaña y su propia respuesta sobre si es un bot | panel de Boom |
+| La campaña / el journey | qué mensaje salió y cuándo; mensajes de plantilla | las herramientas `journeys_*` e `initiatives_*` |
+| La iniciativa | su objetivo, contexto, preguntas guía y su propia respuesta sobre si es un bot | `initiatives_update` |
 | El contexto del agente | todo lo de la tabla de áreas | estas herramientas |
 | Un defecto | un mensaje cortado o deformado, un envío vacío o duplicado, una herramienta que falló | no es instrucción de nadie; repórtalo a Boom |
 
@@ -380,7 +380,8 @@ a través de otro objeto, pon en `path` la ruta, salto por salto desde la person
 | Campañas | las herramientas `initiatives_*` |
 | Segmentos, audiencias | las herramientas `segments_*` (ver arriba) |
 | El objetivo, el contexto, las preguntas, la condición de marcado o la respuesta de identidad de una iniciativa | `initiatives_update`, incluso ya lanzada. `context` y `objective` reemplazan el valor completo: léelo primero y envíalo de vuelta con el cambio. Una iniciativa no tiene tono propio; el tono del agente está en su contexto de agente, que se edita con estas herramientas |
-| Plantillas de WhatsApp o de correo, conexiones de canales | panel de Boom |
+| Plantillas de WhatsApp o de correo | las herramientas `templates_*` (WhatsApp) y `email_templates_*` |
+| Conexiones de canales | panel de Boom |
 | Un mensaje roto, una respuesta que falta, una herramienta que falló | el equipo de Boom, con la conversación |
 | Precios, contratos, acceso a la cuenta, preguntas de API | el equipo de Boom |
 

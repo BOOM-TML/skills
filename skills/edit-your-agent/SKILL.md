@@ -301,8 +301,8 @@ customer's personal details into the agent's context.
 
 | Layer | Governs | Where it changes |
 |---|---|---|
-| The campaign / journey | which message went out and when; template messages | Boom dashboard |
-| The initiative | its objective, guiding questions, tone for that campaign, and its own bot-disclosure answer | Boom dashboard |
+| The campaign / journey | which message went out and when; template messages | The `journeys_*` and `initiatives_*` tools |
+| The initiative | its objective, context, guiding questions, and its own bot-disclosure answer | `initiatives_update` |
 | The agent context | everything in the areas table | these tools |
 | A defect | a cut-off or mangled message, an empty or duplicate send, a failed tool | nobody's instruction; report to Boom |
 
@@ -384,7 +384,8 @@ through another object, set `path` to the route, hop by hop from the person:
 | Campaigns | The `initiatives_*` tools |
 | Segments, audiences | The `segments_*` tools (see above) |
 | An initiative's objective, context, questions, flag condition or identity answer | `initiatives_update`, even once launched. `context` and `objective` replace the whole value: read it first and send it back with the change. An initiative has no tone of its own; the agent's tone is in its agent context, edited with these tools |
-| WhatsApp or email templates, channel connections | Boom dashboard |
+| WhatsApp or email templates | The `templates_*` (WhatsApp) and `email_templates_*` tools |
+| Channel connections | Boom dashboard |
 | A broken message, missing reply, failed tool | Boom's team, with the conversation |
 | Pricing, contracts, account access, API questions | Boom's team |
 
