@@ -369,7 +369,7 @@ a través de otro objeto, pon en `path` la ruta, salto por salto desde la person
   `warnings` que dice que una condición no coincidirá con nadie, pon en su `path` una de
   las rutas que nombra, con `segments_update`. No le digas al usuario que lo termine
   en el panel.
-- Un segmento eliminado conserva su slug. Corrige el segmento en su lugar en vez de
+- Un segmento eliminado o desactivado conserva su slug. Corrige el segmento en su lugar en vez de
   eliminarlo y crearlo de nuevo.
 
 ## Fuera de alcance

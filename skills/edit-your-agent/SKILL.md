@@ -373,7 +373,7 @@ through another object, set `path` to the route, hop by hop from the person:
   `warnings` entry saying a condition will match nobody, set its `path` to one of
   the routes it names, with `segments_update`. Don't tell the user to finish it
   in the dashboard.
-- A deleted segment keeps its slug. Fix a segment in place instead of deleting
+- A deleted or disabled segment keeps its slug. Fix a segment in place instead of deleting
   and re-creating it.
 
 ## Out of scope

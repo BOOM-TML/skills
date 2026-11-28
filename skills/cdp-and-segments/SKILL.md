@@ -47,7 +47,7 @@ A `has_relationship` condition **without `path`** matches only objects linked to
 - **Copy the route** from `segments_catalog` → `reachableObjects`, which lists every route to each object type. Don't guess relationship names or directions.
 - **Data columns** take the same shape: `outputColumns.customObjects[].path`.
 - **Heed the warning.** When `segments_create`, `segments_update` or `segments_validate` returns a `warnings` entry saying a condition will match nobody, set that condition's `path` to one of the routes the warning names.
-- **Fix in place** with `segments_update`. Don't delete and re-create: a deleted segment keeps its slug, so the new one can't reuse it.
+- **Fix in place** with `segments_update`. Don't delete and re-create: a deleted or disabled segment keeps its slug, so the new one can't reuse it.
 
 ## Boom best practices
 
